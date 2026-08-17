@@ -1,6 +1,7 @@
 import express from 'express';
 import db from '../db.js';
 import { lessonsData } from '../data/lessons.js';
+import { exercisesData } from '../data/exercises.js';
 
 const router = express.Router();
 
@@ -56,7 +57,40 @@ router.post('/seed', async (req, res) => {
         [number, title, mode, concept_focus, description, JSON.stringify(content), listening_goals, pass_criteria]
       );
     }
-    res.json({ message: 'Lessons seeded successfully' });
+
+    for (const group of exercisesData) {
+      const lesson = await db.query('SELECT id FROM lessons WHERE number = $1', [
+        group.lesson_number
+      ]);
+      if (lesson.rows.length === 0) continue;
+
+      const lessonId = lesson.rows[0].id;
+      const existing = await db.query(
+        'SELECT 1 FROM lesson_exercises WHERE lesson_id = $1 LIMIT 1',
+        [lessonId]
+      );
+      if (existing.rows.length > 0) continue;
+
+      for (const [index, ex] of group.exercises.entries()) {
+        await db.query(
+          `INSERT INTO lesson_exercises
+             (lesson_id, exercise_number, name, description, type, tempo, duration_seconds, success_criteria)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            lessonId,
+            index + 1,
+            ex.name,
+            ex.description,
+            ex.type,
+            ex.tempo,
+            ex.duration_seconds,
+            ex.success_criteria
+          ]
+        );
+      }
+    }
+
+    res.json({ message: 'Lessons and exercises seeded successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

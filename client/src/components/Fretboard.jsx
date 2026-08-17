@@ -4,8 +4,13 @@ import './Fretboard.css';
 const STRING_NAMES = ['E', 'A', 'D', 'G'];
 const NUM_FRETS = 24;
 const FRET_WIDTH = 50;
-const FRET_HEIGHT = 60;
-const STRING_SPACING = 70;
+const STRING_SPACING = 55;
+const PAD_LEFT = 44;
+const PAD_TOP = 34;
+const INLAY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21];
+
+const boardHeight = PAD_TOP + 3 * STRING_SPACING + 40;
+const boardWidth = PAD_LEFT + NUM_FRETS * FRET_WIDTH + 20;
 
 export default function Fretboard({ scaleNotes, root }) {
   const [hoveredNote, setHoveredNote] = useState(null);
@@ -15,153 +20,152 @@ export default function Fretboard({ scaleNotes, root }) {
     setSelectedNotes(new Set());
   }, [scaleNotes]);
 
-  const getNoteKey = (string, fret) => `${string}-${fret}`;
+  const noteKey = (string, fret) => `${string}-${fret}`;
 
-  const isScaleNote = (string, fret) => {
-    if (!scaleNotes || !scaleNotes[string]) return false;
-    return scaleNotes[string].some((note) => note.fret === fret);
+  const getNote = (string, fret) =>
+    scaleNotes?.[string]?.find((n) => n.fret === fret) ?? null;
+
+  const toggleNote = (string, fret) => {
+    const key = noteKey(string, fret);
+    const next = new Set(selectedNotes);
+    next.has(key) ? next.delete(key) : next.add(key);
+    setSelectedNotes(next);
   };
 
-  const getNote = (string, fret) => {
-    if (!scaleNotes || !scaleNotes[string]) return null;
-    return scaleNotes[string].find((note) => note.fret === fret);
-  };
-
-  const handleFretClick = (string, fret) => {
-    const key = getNoteKey(string, fret);
-    const newSelected = new Set(selectedNotes);
-    if (newSelected.has(key)) {
-      newSelected.delete(key);
-    } else {
-      newSelected.add(key);
-    }
-    setSelectedNotes(newSelected);
-  };
+  const stringY = (index) => PAD_TOP + index * STRING_SPACING;
+  const fretX = (fret) => PAD_LEFT + fret * FRET_WIDTH;
 
   return (
     <div className="fretboard-container">
-      <svg
-        className="fretboard"
-        width={(NUM_FRETS + 1) * FRET_WIDTH + 100}
-        height={4 * STRING_SPACING + 100}
-        viewBox={`0 0 ${(NUM_FRETS + 1) * FRET_WIDTH + 100} ${4 * STRING_SPACING + 100}`}
-      >
-        {/* Fret lines */}
-        {Array.from({ length: NUM_FRETS + 1 }).map((_, fretNum) => (
-          <line
-            key={`fret-${fretNum}`}
-            x1={50 + fretNum * FRET_WIDTH}
-            y1={30}
-            x2={50 + fretNum * FRET_WIDTH}
-            y2={30 + 4 * STRING_SPACING}
-            stroke="#444"
-            strokeWidth="2"
-          />
-        ))}
+      <div className="fretboard-scroll">
+        <svg
+          className="fretboard"
+          width={boardWidth}
+          height={boardHeight}
+          viewBox={`0 0 ${boardWidth} ${boardHeight}`}
+          role="img"
+          aria-label={`${root} scale positions on a four-string bass`}
+        >
+          {Array.from({ length: NUM_FRETS + 1 }).map((_, fret) => (
+            <line
+              key={`fret-${fret}`}
+              x1={fretX(fret)}
+              y1={stringY(0)}
+              x2={fretX(fret)}
+              y2={stringY(3)}
+              stroke={fret === 0 ? '#bbb' : '#444'}
+              strokeWidth={fret === 0 ? 4 : 2}
+            />
+          ))}
 
-        {/* String lines */}
-        {Array.from({ length: 4 }).map((_, stringNum) => (
-          <line
-            key={`string-${stringNum}`}
-            x1={50}
-            y1={30 + stringNum * STRING_SPACING}
-            x2={50 + NUM_FRETS * FRET_WIDTH}
-            y2={30 + stringNum * STRING_SPACING}
-            stroke="#666"
-            strokeWidth={stringNum === 0 ? 3 : 2}
-          />
-        ))}
+          {INLAY_FRETS.map((fret) => (
+            <circle
+              key={`inlay-${fret}`}
+              cx={fretX(fret + 0.5)}
+              cy={stringY(3) + 20}
+              r="3.5"
+              fill="#555"
+            />
+          ))}
 
-        {/* Fret markers */}
-        {[3, 5, 7, 9, 12, 15, 17, 19, 21].map((fret) => (
-          <circle
-            key={`marker-${fret}`}
-            cx={50 + fret * FRET_WIDTH}
-            cy={30 + 2 * STRING_SPACING}
-            r="3"
-            fill="#555"
-          />
-        ))}
-
-        {/* Notes */}
-        {Array.from({ length: 4 }).map((_, stringNum) =>
-          Array.from({ length: NUM_FRETS }).map((_, fretNum) => {
-            const stringNumber = stringNum + 1;
-            const note = getNote(stringNumber, fretNum);
-            const isScale = isScaleNote(stringNumber, fretNum);
-            const key = getNoteKey(stringNumber, fretNum);
-            const isSelected = selectedNotes.has(key);
-            const isHovered = hoveredNote === key;
-
-            return isScale ? (
-              <g
-                key={key}
-                onClick={() => handleFretClick(stringNumber, fretNum)}
-                onMouseEnter={() => setHoveredNote(key)}
-                onMouseLeave={() => setHoveredNote(null)}
-                className="fret-note"
+          {STRING_NAMES.map((name, index) => (
+            <g key={`string-${name}`}>
+              <line
+                x1={PAD_LEFT}
+                y1={stringY(index)}
+                x2={fretX(NUM_FRETS)}
+                y2={stringY(index)}
+                stroke="#666"
+                strokeWidth={3 - index * 0.4}
+              />
+              <text
+                x={PAD_LEFT - 16}
+                y={stringY(index)}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="13"
+                fontWeight="bold"
+                fill="#999"
               >
-                <circle
-                  cx={50 + (fretNum + 0.5) * FRET_WIDTH}
-                  cy={30 + stringNum * STRING_SPACING}
-                  r={isSelected || isHovered ? 14 : 10}
-                  fill={note.isRoot ? '#2ecc71' : '#3a7ca5'}
-                  opacity={isSelected || isHovered ? 1 : 0.8}
-                  className="note-dot"
-                />
-                <text
-                  x={50 + (fretNum + 0.5) * FRET_WIDTH}
-                  y={30 + stringNum * STRING_SPACING}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize="10"
-                  fill="white"
-                  fontWeight="bold"
-                  pointerEvents="none"
+                {name}
+              </text>
+            </g>
+          ))}
+
+          {Array.from({ length: NUM_FRETS }).map((_, fret) => (
+            <text
+              key={`fretnum-${fret}`}
+              x={fretX(fret + 0.5)}
+              y={stringY(3) + 36}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#666"
+            >
+              {fret}
+            </text>
+          ))}
+
+          {STRING_NAMES.map((_, stringIndex) =>
+            Array.from({ length: NUM_FRETS }).map((_, fret) => {
+              const stringNumber = stringIndex + 1;
+              const note = getNote(stringNumber, fret);
+              if (!note) return null;
+
+              const key = noteKey(stringNumber, fret);
+              const emphasized = selectedNotes.has(key) || hoveredNote === key;
+              const fill = note.isRoot
+                ? '#2ecc71'
+                : note.isCharacteristicTone
+                  ? '#f39c12'
+                  : '#3a7ca5';
+
+              return (
+                <g
+                  key={key}
+                  className="fret-note"
+                  onClick={() => toggleNote(stringNumber, fret)}
+                  onMouseEnter={() => setHoveredNote(key)}
+                  onMouseLeave={() => setHoveredNote(null)}
                 >
-                  {note.note}
-                </text>
-              </g>
-            ) : null;
-          })
-        )}
-      </svg>
-
-      {/* String labels */}
-      <div className="string-labels">
-        {STRING_NAMES.map((name, idx) => (
-          <div
-            key={name}
-            className="string-label"
-            style={{ transform: `translateY(${idx * STRING_SPACING + 30}px)` }}
-          >
-            {name}
-          </div>
-        ))}
+                  <circle
+                    cx={fretX(fret + 0.5)}
+                    cy={stringY(stringIndex)}
+                    r={emphasized ? 14 : 11}
+                    fill={fill}
+                    opacity={emphasized ? 1 : 0.85}
+                    className="note-dot"
+                  />
+                  <text
+                    x={fretX(fret + 0.5)}
+                    y={stringY(stringIndex)}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize="10"
+                    fontWeight="bold"
+                    fill="white"
+                    pointerEvents="none"
+                  >
+                    {note.note}
+                  </text>
+                </g>
+              );
+            })
+          )}
+        </svg>
       </div>
 
-      {/* Fret numbers */}
-      <div className="fret-numbers">
-        {Array.from({ length: NUM_FRETS }).map((_, idx) => (
-          <div
-            key={`fret-${idx}`}
-            className="fret-number"
-            style={{ left: `${50 + (idx + 0.5) * FRET_WIDTH}px` }}
-          >
-            {idx}
-          </div>
-        ))}
-      </div>
-
-      {/* Legend */}
       <div className="fretboard-legend">
         <div className="legend-item">
-          <div className="legend-dot" style={{ backgroundColor: '#2ecc71' }}></div>
-          <span>Root Note</span>
+          <span className="legend-dot" style={{ backgroundColor: '#2ecc71' }} />
+          <span>Root</span>
         </div>
         <div className="legend-item">
-          <div className="legend-dot" style={{ backgroundColor: '#3a7ca5' }}></div>
-          <span>Scale Tone</span>
+          <span className="legend-dot" style={{ backgroundColor: '#f39c12' }} />
+          <span>Characteristic tone</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-dot" style={{ backgroundColor: '#3a7ca5' }} />
+          <span>Scale tone</span>
         </div>
       </div>
     </div>

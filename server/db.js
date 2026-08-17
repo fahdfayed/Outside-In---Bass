@@ -72,11 +72,85 @@ const db = {
 
       `CREATE TABLE IF NOT EXISTS modes (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(50) NOT NULL,
+        name VARCHAR(50) UNIQUE NOT NULL,
         intervals VARCHAR(50) NOT NULL,
         characteristic_tone VARCHAR(10),
         formula TEXT,
         created_at TIMESTAMP DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS practice_sessions (
+        id SERIAL PRIMARY KEY,
+        session_type VARCHAR(50) NOT NULL,
+        duration_seconds INT,
+        status VARCHAR(20),
+        tempo INT,
+        key VARCHAR(10),
+        mode VARCHAR(50),
+        exercises_completed INT DEFAULT 0,
+        exercises_total INT DEFAULT 0,
+        start_time TIMESTAMP DEFAULT NOW(),
+        end_time TIMESTAMP,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS recordings (
+        id SERIAL PRIMARY KEY,
+        session_id INT REFERENCES practice_sessions(id) ON DELETE CASCADE,
+        exercise_number INT,
+        audio_data BYTEA,
+        duration_seconds DECIMAL(10, 2),
+        detected_notes JSONB,
+        accuracy_score DECIMAL(5, 2),
+        tempo_stability DECIMAL(5, 2),
+        note_onset_accuracy DECIMAL(5, 2),
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS performance_metrics (
+        id SERIAL PRIMARY KEY,
+        session_id INT REFERENCES practice_sessions(id) ON DELETE CASCADE,
+        exercise_number INT,
+        key VARCHAR(10),
+        mode VARCHAR(50),
+        total_notes INT,
+        correct_notes INT,
+        wrong_notes INT,
+        missed_notes INT,
+        chromatic_notes INT,
+        timing_offset_ms DECIMAL(8, 2),
+        register_range JSONB,
+        motif_repetitions INT,
+        tension_resolution_count INT,
+        score DECIMAL(5, 2),
+        feedback TEXT[],
+        created_at TIMESTAMP DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS practice_history (
+        id SERIAL PRIMARY KEY,
+        exercise_id INT REFERENCES lesson_exercises(id) ON DELETE CASCADE,
+        key VARCHAR(10),
+        attempts INT DEFAULT 0,
+        best_score DECIMAL(5, 2),
+        last_attempted TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS weak_areas (
+        id SERIAL PRIMARY KEY,
+        key VARCHAR(10),
+        mode VARCHAR(50),
+        area_type VARCHAR(50),
+        weakness_score DECIMAL(5, 2),
+        recent_failures INT DEFAULT 0,
+        priority_level INT DEFAULT 5,
+        last_trained TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )`
     ];
 

@@ -1,0 +1,233 @@
+.active-session {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.session-header {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border: 1px solid #3a7ca5;
+  border-radius: 8px;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.session-title h2 {
+  font-size: 1.5rem;
+  color: white;
+  margin: 0;
+}
+
+.session-title p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+}
+
+.session-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.time-display {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: white;
+  font-family: 'Courier New', monospace;
+  line-height: 1;
+}
+
+.time-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.emergency-stop {
+  padding: 0.75rem 1.5rem;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.emergency-stop:hover {
+  background: #c0392b;
+  box-shadow: 0 0 12px rgba(231, 76, 60, 0.4);
+}
+
+.session-progress {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #333;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2ecc71, #3a7ca5);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  display: block;
+  text-align: right;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.session-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.exercise-display,
+.recording-section {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.exercise-display h3 {
+  font-size: 1.2rem;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.exercise-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-card {
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.info-card .label {
+  display: block;
+  color: #999;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.info-card .value {
+  display: block;
+  color: #3a7ca5;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.exercise-instructions {
+  background: #222;
+  border-left: 3px solid #2ecc71;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.exercise-instructions h4 {
+  color: white;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.exercise-instructions ul {
+  list-style: none;
+  padding: 0;
+}
+
+.exercise-instructions li {
+  padding: 0.4rem 0 0.4rem 1.5rem;
+  color: #999;
+  position: relative;
+  font-size: 0.9rem;
+}
+
+.exercise-instructions li:before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.session-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.stat-label {
+  color: #999;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.stat-value {
+  color: #3a7ca5;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .session-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .session-timer {
+    align-self: flex-start;
+  }
+
+  .session-content {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-info {
+    grid-template-columns: 1fr;
+  }
+
+  .session-stats {
+    grid-template-columns: 1fr;
+  }
+}

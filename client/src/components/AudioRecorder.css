@@ -1,0 +1,164 @@
+.audio-recorder {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.recorder-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.record-button {
+  padding: 1rem 2rem;
+  background: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s;
+}
+
+.record-button:hover:not(:disabled) {
+  background: #27ae60;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);
+  transform: scale(1.05);
+}
+
+.record-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.record-button.recording {
+  background: #e74c3c;
+  animation: pulse 0.6s infinite;
+}
+
+.record-button.recording:hover {
+  background: #c0392b;
+}
+
+.record-icon {
+  font-size: 1rem;
+}
+
+.record-icon.blink {
+  animation: blink 0.6s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+  }
+}
+
+@keyframes blink {
+  0%, 49%, 100% {
+    opacity: 1;
+  }
+  50%, 99% {
+    opacity: 0.3;
+  }
+}
+
+.recording-display {
+  background: #222;
+  border: 2px solid #3a7ca5;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.time-display {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #3a7ca5;
+  font-family: 'Courier New', monospace;
+  margin-bottom: 1rem;
+}
+
+.pitch-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.detected-note {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #2ecc71;
+  font-family: 'Courier New', monospace;
+}
+
+.detected-freq {
+  color: #999;
+  font-size: 0.9rem;
+  font-family: 'Courier New', monospace;
+}
+
+.confidence-bar {
+  width: 200px;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3a7ca5, #2ecc71);
+  transition: width 0.1s linear;
+}
+
+.no-pitch {
+  color: #999;
+  font-size: 1.1rem;
+  padding: 1rem 0;
+}
+
+.feedback-panel {
+  background: #222;
+  border-left: 3px solid #3a7ca5;
+  border-radius: 4px;
+  padding: 1rem;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.feedback-line {
+  color: #999;
+  font-size: 0.9rem;
+  padding: 0.3rem 0;
+  font-family: 'Courier New', monospace;
+}
+
+.feedback-line:first-child {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .record-button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .detected-note {
+    font-size: 2rem;
+  }
+
+  .confidence-bar {
+    width: 150px;
+  }
+}

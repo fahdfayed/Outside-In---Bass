@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import LessonList from './components/LessonList';
 import LessonViewer from './components/LessonViewer';
 import FretboardTrainer from './components/FretboardTrainer';
+import PracticeStudio from './components/PracticeStudio';
 import './App.css';
 
 export default function App() {
@@ -42,6 +43,12 @@ export default function App() {
         >
           Fretboard Trainer
         </button>
+        <button
+          onClick={() => setCurrentView('practice')}
+          className={currentView === 'practice' ? 'active' : ''}
+        >
+          Practice Studio
+        </button>
       </nav>
 
       <main className="app-main">
@@ -64,6 +71,15 @@ export default function App() {
               ← Back to Lessons
             </button>
             <FretboardTrainer />
+          </>
+        )}
+
+        {currentView === 'practice' && (
+          <>
+            <button onClick={handleBack} className="back-button">
+              ← Back to Lessons
+            </button>
+            <PracticeStudio />
           </>
         )}
       </main>

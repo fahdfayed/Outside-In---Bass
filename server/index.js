@@ -3,6 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import lessonsRouter from './routes/lessons.js';
 import fretboardRouter from './routes/fretboard.js';
+import sessionsRouter from './routes/sessions.js';
+import recordingsRouter from './routes/recordings.js';
+import coachRouter from './routes/coach.js';
 import db from './db.js';
 
 dotenv.config();
@@ -19,6 +22,9 @@ db.init();
 // Routes
 app.use('/api/lessons', lessonsRouter);
 app.use('/api/fretboard', fretboardRouter);
+app.use('/api/sessions', sessionsRouter);
+app.use('/api/recordings', recordingsRouter);
+app.use('/api/coach', coachRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

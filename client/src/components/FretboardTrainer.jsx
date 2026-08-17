@@ -95,8 +95,9 @@ export default function FretboardTrainer() {
         <ul>
           <li>Select a mode and root note to highlight scale degrees on the fretboard</li>
           <li>Green dots show the root note</li>
-          <li>Blue dots show other scale tones</li>
-          <li>Practice identifying patterns and playing scales smoothly</li>
+          <li>Orange dots show the characteristic tone — the degree that gives the mode its sound</li>
+          <li>Blue dots show the remaining scale tones</li>
+          <li>Click any note to mark it while you work through a shape</li>
         </ul>
       </div>
     </div>

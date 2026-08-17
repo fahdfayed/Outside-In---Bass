@@ -5,12 +5,15 @@ A complete personal bass-practice environment that takes intermediate bassists f
 ## Features
 
 ### Phase 1: Complete
-- **Lesson Content & Curriculum**: 28-lesson structured course covering fretboard geography, modes, and improvisation techniques
-- **Fretboard Trainer**: Visual mode shape explorer with interactive note locations across all 4 strings
+- **Lesson Content & Curriculum**: structured course covering fretboard geography, modes, and improvisation techniques
+- **Fretboard Trainer**: visual mode shape explorer across all 4 strings, highlighting the root and each mode's characteristic tone
 
-### Phase 2: In Development
-- Practice studio with Beast and MILLPAD system
-- Additional training modules
+### Phase 2: Complete
+- **Practice Studio**: timed sessions with a per-exercise timer, progress tracking and an emergency stop
+- **Listening Engine**: live pitch detection in the browser via the Web Audio API, showing the detected note and frequency as you play
+- **Recording & Scoring**: each take is scored on pitch accuracy against the mode, timing against the beat grid, register span and motif repetition
+- **Adaptive Coach**: analyses recorded evidence to pick the next session's key and mode, and recommends matching exercises
+- **Session Review**: per-exercise metrics, strengths, weak areas and coach feedback
 
 ## Technology Stack
 
@@ -83,6 +86,21 @@ The app will be available at http://localhost:3000
 - `GET /api/fretboard/modes` - Get all modes
 - `POST /api/fretboard/modes/seed` - Initialize modes database
 
+### Sessions
+- `POST /api/sessions/create` - Start a practice session
+- `GET /api/sessions/:id` - Get a session with its recordings and metrics
+- `PUT /api/sessions/:id/complete` - Mark a session complete
+- `GET /api/sessions/history/recent` - Recent completed sessions
+
+### Recordings
+- `POST /api/recordings/:sessionId/upload` - Upload a take and score it
+- `GET /api/recordings/:sessionId/:exerciseNumber` - Fetch a stored take
+
+### Coach
+- `GET /api/coach/next-session` - Recommended key, mode and exercises
+- `GET /api/coach/weak-areas` - Ranked weaknesses from recorded evidence
+- `GET /api/coach/key-matrix` - Per-key results, including untested keys
+
 ## Current Features
 
 ### Lessons
@@ -100,13 +118,35 @@ The app will be available at http://localhost:3000
 - Root notes highlighted in green
 - Clickable note dots for practice
 
+## How scoring works
+
+The browser records compressed audio (WebM/Opus), which the server cannot decode without
+a transcoder. Pitch detection therefore runs client-side in the Web Audio API's
+`AnalyserNode`, and the detected notes are posted alongside the audio blob. The server
+scores those detections against the session's mode:
+
+- **Pitch accuracy** (60%) — how many notes belong to the target mode
+- **Timing** (25%) — note placement against an eighth-note grid derived from the tempo
+- **Coverage** (15%) — notes played versus notes expected for the elapsed time
+
+It also reports register span, motif repetition and chromatic content, and turns those
+into spoken-style feedback lines.
+
+### Measurement boundaries
+
+The system evaluates monophonic pitch, note onset timing, register range and recurring
+contours. It does not detect hand tension, posture, or which fret produced a note — a
+given pitch can be played in several places on a bass. A clean DI or audio-interface
+signal gives the most reliable results.
+
 ## Next Steps
 
-1. Implement Practice Studio with Beast/MILLPAD system
-2. Add audio listening engine
-3. Build adaptive coach
-4. Add performance recording and analysis
-5. Implement user authentication and progress tracking
+1. Beast/MILLPAD retrieval drills and the 30-day routine
+2. Spoken instructions and hands-free transitions between blocks
+3. Automatic 90-second repair blocks for failed exercises
+4. Inside/Outside lab: chromatic approaches, enclosures, side-slipping
+5. Five-axis assessment (HEAR / SEE / KNOW / PLAY / CREATE)
+6. User authentication and multi-user progress tracking
 
 ## Contributing
 

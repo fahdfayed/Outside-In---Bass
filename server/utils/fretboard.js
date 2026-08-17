@@ -9,7 +9,7 @@ export function getNoteAtPosition(string, fret) {
 
   const midiNote = BASS_TUNING[string - 1] + fret;
   const noteIndex = midiNote % 12;
-  const octave = Math.floor(midiNote / 12);
+  const octave = Math.floor(midiNote / 12) - 1;
   const note = NOTES[noteIndex];
 
   return {
@@ -67,16 +67,24 @@ export function generateFretboardData(mode, root) {
   return fretboardMap;
 }
 
-function isCharacteristicTone(mode, note, root) {
-  const characteristicTones = {
-    'Ionian': '3',
-    'Dorian': 'b3',
-    'Phrygian': 'b2',
-    'Lydian': '#4',
-    'Mixolydian': 'b7',
-    'Aeolian': 'b3',
-    'Locrian': 'b2'
-  };
+// Semitones above the root for the degree that gives each mode its identity.
+const CHARACTERISTIC_INTERVALS = {
+  'Ionian': 11,     // natural 7
+  'Dorian': 9,      // natural 6
+  'Phrygian': 1,    // b2
+  'Lydian': 6,      // #4
+  'Mixolydian': 10, // b7
+  'Aeolian': 8,     // b6
+  'Locrian': 6      // b5
+};
 
-  return false;
+function isCharacteristicTone(mode, note, root) {
+  const interval = CHARACTERISTIC_INTERVALS[mode];
+  if (interval === undefined) return false;
+
+  const rootIndex = NOTES.indexOf(root);
+  const noteIndex = NOTES.indexOf(note);
+  if (rootIndex === -1 || noteIndex === -1) return false;
+
+  return (noteIndex - rootIndex + 12) % 12 === interval;
 }
