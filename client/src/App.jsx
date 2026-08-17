@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import LessonList from './components/LessonList';
 import LessonViewer from './components/LessonViewer';
 import FretboardTrainer from './components/FretboardTrainer';
@@ -8,20 +8,21 @@ import './App.css';
 export default function App() {
   const [currentView, setCurrentView] = useState('lessons');
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [sessionActive, setSessionActive] = useState(false);
 
   const handleSelectLesson = (lesson) => {
     setSelectedLesson(lesson);
     setCurrentView('lesson');
   };
 
-  const handleTrainFretboard = () => {
-    setCurrentView('fretboard');
-  };
-
   const handleBack = () => {
     setCurrentView('lessons');
     setSelectedLesson(null);
   };
+
+  const handleSessionActiveChange = useCallback((active) => {
+    setSessionActive(active);
+  }, []);
 
   return (
     <div className="app">
@@ -30,26 +31,30 @@ export default function App() {
         <p>Master modes and improvise across the entire fretboard</p>
       </header>
 
-      <nav className="app-nav">
-        <button
-          onClick={() => setCurrentView('lessons')}
-          className={currentView === 'lessons' ? 'active' : ''}
-        >
-          Lessons
-        </button>
-        <button
-          onClick={handleTrainFretboard}
-          className={currentView === 'fretboard' ? 'active' : ''}
-        >
-          Fretboard Trainer
-        </button>
-        <button
-          onClick={() => setCurrentView('practice')}
-          className={currentView === 'practice' ? 'active' : ''}
-        >
-          Practice Studio
-        </button>
-      </nav>
+      {/* Navigation disappears during a hands-free routine: the emergency stop
+          is meant to be the only control available while playing. */}
+      {!sessionActive && (
+        <nav className="app-nav">
+          <button
+            onClick={() => setCurrentView('lessons')}
+            className={currentView === 'lessons' ? 'active' : ''}
+          >
+            Lessons
+          </button>
+          <button
+            onClick={() => setCurrentView('fretboard')}
+            className={currentView === 'fretboard' ? 'active' : ''}
+          >
+            Fretboard Trainer
+          </button>
+          <button
+            onClick={() => setCurrentView('practice')}
+            className={currentView === 'practice' ? 'active' : ''}
+          >
+            Practice Studio
+          </button>
+        </nav>
+      )}
 
       <main className="app-main">
         {currentView === 'lessons' && selectedLesson === null && (
@@ -76,10 +81,12 @@ export default function App() {
 
         {currentView === 'practice' && (
           <>
-            <button onClick={handleBack} className="back-button">
-              ← Back to Lessons
-            </button>
-            <PracticeStudio />
+            {!sessionActive && (
+              <button onClick={handleBack} className="back-button">
+                ← Back to Lessons
+              </button>
+            )}
+            <PracticeStudio onSessionActiveChange={handleSessionActiveChange} />
           </>
         )}
       </main>

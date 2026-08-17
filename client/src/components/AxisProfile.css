@@ -1,0 +1,142 @@
+.axis-profile {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.axis-profile.loading { color: #999; text-align: center; }
+
+.axis-header h3 {
+  font-size: 1.15rem;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.axis-header p {
+  color: #999;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.axis-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.axis-row {
+  display: grid;
+  grid-template-columns: 190px 1fr 80px;
+  gap: 1rem;
+  align-items: center;
+}
+
+.axis-name { display: flex; flex-direction: column; gap: 0.15rem; }
+
+.axis-name strong {
+  color: #e5e5e5;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.axis-name small { color: #777; font-size: 0.75rem; }
+
+.axis-meter {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.axis-track {
+  flex: 1;
+  height: 10px;
+  background: #2a2a2a;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.axis-track.untested {
+  background: repeating-linear-gradient(
+    45deg,
+    #262626,
+    #262626 5px,
+    #1f1f1f 5px,
+    #1f1f1f 10px
+  );
+}
+
+.axis-fill { height: 100%; border-radius: 5px; }
+.axis-fill.good { background: #2ecc71; }
+.axis-fill.ok { background: #f39c12; }
+.axis-fill.poor { background: #e74c3c; }
+
+.axis-score {
+  min-width: 68px;
+  text-align: right;
+  font-weight: 700;
+  color: #e5e5e5;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.axis-score.untested {
+  color: #666;
+  font-weight: 500;
+  font-size: 0.82rem;
+}
+
+.axis-attempts {
+  color: #777;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.axis-debt {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #333;
+}
+
+.axis-debt h4 {
+  color: white;
+  font-size: 0.95rem;
+  margin-bottom: 0.85rem;
+}
+
+.axis-debt ul { list-style: none; padding: 0; margin: 0; }
+
+.axis-debt li {
+  display: grid;
+  grid-template-columns: 80px 90px 1fr;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  background: #222;
+  border-radius: 4px;
+  border-left: 3px solid #444;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.axis-debt li.debt-weak { border-left-color: #e74c3c; }
+.axis-debt li.debt-untested { border-left-color: #3a7ca5; }
+.axis-debt li.debt-stale { border-left-color: #f39c12; }
+
+.debt-axis { font-weight: 700; color: #e5e5e5; letter-spacing: 1px; }
+
+.debt-reason {
+  color: #999;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+}
+
+.debt-detail { color: #999; }
+
+@media (max-width: 760px) {
+  .axis-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  .axis-attempts { text-align: left; }
+  .axis-debt li { grid-template-columns: 1fr; gap: 0.25rem; }
+}

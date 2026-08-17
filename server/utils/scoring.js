@@ -1,5 +1,8 @@
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
+// Fraction of the expected note count that counts as "played the block".
+const COVERAGE_FLOOR = 0.5;
+
 const MODE_INTERVALS = {
   Ionian: [0, 2, 4, 5, 7, 9, 11],
   Dorian: [0, 2, 3, 5, 7, 9, 10],
@@ -17,7 +20,10 @@ export function scalePitchClasses(key, mode) {
 }
 
 // detections: [{ midi, timestamp }] produced by the client's pitch tracker.
-export function scoreDetections(detections, key, mode, tempo) {
+// blockSeconds is how long the player was asked to play. Without it, coverage can
+// only be measured between the first and last note, so someone who plays two notes
+// and stops looks as complete as someone who played the whole block.
+export function scoreDetections(detections, key, mode, tempo, blockSeconds = null) {
   const valid = detections.filter(
     (d) => Number.isFinite(d.midi) && Number.isFinite(d.timestamp)
   );
@@ -37,7 +43,7 @@ export function scoreDetections(detections, key, mode, tempo) {
     else chromaticCount++;
   }
 
-  const expectedNotes = expectedNoteCount(valid, tempo);
+  const expectedNotes = expectedNoteCount(valid, tempo, blockSeconds);
   const missedCount = Math.max(0, expectedNotes - valid.length);
 
   const timing = analyzeTiming(valid, tempo);
@@ -46,8 +52,15 @@ export function scoreDetections(detections, key, mode, tempo) {
 
   const pitchAccuracy = correctCount / valid.length;
   const coverage = expectedNotes > 0 ? Math.min(1, valid.length / expectedNotes) : 1;
-  const accuracy =
-    (pitchAccuracy * 0.6 + timing.timingAccuracy * 0.25 + coverage * 0.15) * 100;
+
+  // Coverage has to gate the result, not merely contribute a slice of it. Two
+  // perfectly-placed notes in a thirty-second block are not a 90% pass — there
+  // simply isn't enough playing to judge. Below the sufficiency floor the whole
+  // score scales down in proportion to how little was played.
+  const sufficiency = Math.min(1, coverage / COVERAGE_FLOOR);
+  const weighted =
+    pitchAccuracy * 0.6 + timing.timingAccuracy * 0.25 + coverage * 0.15;
+  const accuracy = weighted * sufficiency * 100;
 
   return {
     accuracy: round(accuracy),
@@ -64,13 +77,15 @@ export function scoreDetections(detections, key, mode, tempo) {
     durationSeconds: round(valid[valid.length - 1].timestamp - valid[0].timestamp),
     registerRange,
     motifRepetitions,
+    coverage: round(coverage * 100),
     feedback: buildFeedback({
       pitchAccuracy,
       chromaticCount,
       total: valid.length,
       timing,
       registerRange,
-      motifRepetitions
+      motifRepetitions,
+      coverage
     })
   };
 }
@@ -89,11 +104,21 @@ function emptyAnalysis() {
   };
 }
 
-function expectedNoteCount(detections, tempo) {
-  const span = detections[detections.length - 1].timestamp - detections[0].timestamp;
-  if (span <= 0 || !tempo) return detections.length;
-  const eighthNotesPerSecond = (tempo / 60) * 2;
-  return Math.round(span * eighthNotesPerSecond);
+function expectedNoteCount(detections, tempo, blockSeconds) {
+  if (!tempo) return detections.length;
+
+  // Prefer the block's asked-for duration. Fall back to the played span only when
+  // the caller did not tell us how long the block was.
+  const span = blockSeconds && blockSeconds > 0
+    ? blockSeconds
+    : detections[detections.length - 1].timestamp - detections[0].timestamp;
+
+  if (span <= 0) return detections.length;
+
+  // A quarter-note per beat is a realistic floor for a practice block; expecting
+  // continuous eighths would mark normal phrasing with rests as incomplete.
+  const notesPerSecond = tempo / 60;
+  return Math.max(1, Math.round(span * notesPerSecond));
 }
 
 function analyzeTiming(detections, tempo) {
@@ -150,8 +175,19 @@ function countMotifRepetitions(detections) {
   return Math.max(...contours.values());
 }
 
-function buildFeedback({ pitchAccuracy, chromaticCount, total, timing, registerRange, motifRepetitions }) {
+function buildFeedback({
+  pitchAccuracy, chromaticCount, total, timing, registerRange, motifRepetitions, coverage
+}) {
   const feedback = [];
+
+  // Say this first: everything else is unreliable when barely anything was played.
+  if (coverage < COVERAGE_FLOOR) {
+    feedback.push(
+      coverage < 0.15
+        ? 'Almost nothing was detected. Check your input level and keep playing for the whole block.'
+        : 'You stopped short of the block. Keep playing until the coach moves you on.'
+    );
+  }
 
   if (pitchAccuracy < 0.7) {
     feedback.push('Many notes fell outside the mode. Slow down and target chord tones.');

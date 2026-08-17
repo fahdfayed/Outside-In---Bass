@@ -161,6 +161,28 @@ const db = {
         console.error('Table creation error:', err);
       }
     }
+
+    await this.migrate();
+  },
+
+  // Additive, idempotent schema changes so existing databases pick up new columns.
+  async migrate() {
+    const migrations = [
+      `ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS plan JSONB`,
+      `ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS final_tempo INT`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS axis VARCHAR(10)`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS block_type VARCHAR(20)`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS is_repair BOOLEAN DEFAULT FALSE`,
+      `ALTER TABLE recordings ADD COLUMN IF NOT EXISTS block_type VARCHAR(20)`
+    ];
+
+    for (const migration of migrations) {
+      try {
+        await this.query(migration);
+      } catch (err) {
+        console.error('Migration error:', err);
+      }
+    }
   },
 
   async query(text, params) {

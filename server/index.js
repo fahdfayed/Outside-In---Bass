@@ -6,6 +6,8 @@ import fretboardRouter from './routes/fretboard.js';
 import sessionsRouter from './routes/sessions.js';
 import recordingsRouter from './routes/recordings.js';
 import coachRouter from './routes/coach.js';
+import routinesRouter from './routes/routines.js';
+import assessmentRouter from './routes/assessment.js';
 import db from './db.js';
 
 dotenv.config();
@@ -25,6 +27,8 @@ app.use('/api/fretboard', fretboardRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/recordings', recordingsRouter);
 app.use('/api/coach', coachRouter);
+app.use('/api/routines', routinesRouter);
+app.use('/api/assessment', assessmentRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

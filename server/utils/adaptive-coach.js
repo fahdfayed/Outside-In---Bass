@@ -171,12 +171,15 @@ export class AdaptiveCoach {
         );
 
         if (existing.rows.length > 0) {
+          // An exponential moving average of the score deficit. Summing deficits
+          // instead would grow without bound, overflow the DECIMAL(5,2) column,
+          // and surface meaningless numbers like "Score: 660.0" to the player.
           await this.db.query(
             `UPDATE weak_areas
-             SET weakness_score = weakness_score + $1,
+             SET weakness_score = LEAST(100, GREATEST(0, weakness_score * 0.7 + $1 * 0.3)),
                  recent_failures = recent_failures + 1,
                  updated_at = NOW(),
-                 priority_level = LEAST(10, recent_failures)
+                 priority_level = LEAST(10, recent_failures + 1)
              WHERE key = $2 AND mode = $3`,
             [100 - metric.score, metric.key, metric.mode]
           );

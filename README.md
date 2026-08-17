@@ -15,6 +15,22 @@ A complete personal bass-practice environment that takes intermediate bassists f
 - **Adaptive Coach**: analyses recorded evidence to pick the next session's key and mode, and recommends matching exercises
 - **Session Review**: per-exercise metrics, strengths, weak areas and coach feedback
 
+### Phase 3: Complete
+- **Hands-free routines**: press Start once and the whole session runs itself — spoken
+  instructions, count-in, click track, block transitions and corrections are automatic.
+  The emergency stop is the only control, and the surrounding navigation is hidden
+  while audio is live so a stray click cannot tear down the session.
+- **Routine planner**: builds a fully-timed block plan from the session length, cycling
+  through warm-up → retrieval → drill → ear → improvisation. Long sessions rotate
+  through the phases repeatedly rather than sitting on one exercise.
+- **Automatic repair blocks**: a block that misses its pass score earns one focused
+  90-second repair at a reduced tempo, with an instruction targeted at the actual
+  failure (wrong notes, timing, or register).
+- **Automatic tempo reduction**: unstable timing drops the tempo for the rest of the run.
+- **Five-axis assessment**: HEAR / SEE / KNOW / PLAY / CREATE tracked separately, so
+  strong theory cannot mask weak execution. Untested axes stay untested.
+- **Practice debt**: surfaces axes that are weak, untested, or going stale.
+
 ## Technology Stack
 
 - **Frontend**: React + Vite
@@ -101,6 +117,15 @@ The app will be available at http://localhost:3000
 - `GET /api/coach/weak-areas` - Ranked weaknesses from recorded evidence
 - `GET /api/coach/key-matrix` - Per-key results, including untested keys
 
+### Routines
+- `GET /api/routines/plan` - Preview a timed block plan without creating a session
+- `POST /api/routines/start` - Create a session and store its routine
+- `POST /api/routines/repair` - Build a repair block for a failed block
+
+### Assessment
+- `GET /api/assessment/axes` - Five-axis profile (untested axes stay untested)
+- `GET /api/assessment/debt` - Axes that are weak, untested or stale
+
 ## Current Features
 
 ### Lessons
@@ -127,7 +152,15 @@ scores those detections against the session's mode:
 
 - **Pitch accuracy** (60%) — how many notes belong to the target mode
 - **Timing** (25%) — note placement against an eighth-note grid derived from the tempo
-- **Coverage** (15%) — notes played versus notes expected for the elapsed time
+- **Coverage** (15%) — notes played versus notes expected for the block's duration
+
+Coverage also *gates* the result: if you played less than half the expected notes, the
+whole score scales down in proportion. Two perfectly-placed notes in a thirty-second
+block is not a pass — there isn't enough playing to judge.
+
+Pitch detection uses normalised autocorrelation on a decimated signal rather than an FFT
+bin peak. At bass frequencies an FFT bin is wider than a semitone near the low E, and
+autocorrelation needs octave-error resistance to avoid reporting notes an octave low.
 
 It also reports register span, motif repetition and chromatic content, and turns those
 into spoken-style feedback lines.
@@ -142,10 +175,10 @@ signal gives the most reliable results.
 ## Next Steps
 
 1. Beast/MILLPAD retrieval drills and the 30-day routine
-2. Spoken instructions and hands-free transitions between blocks
-3. Automatic 90-second repair blocks for failed exercises
-4. Inside/Outside lab: chromatic approaches, enclosures, side-slipping
-5. Five-axis assessment (HEAR / SEE / KNOW / PLAY / CREATE)
+2. Inside/Outside lab: chromatic approaches, enclosures, side-slipping
+3. Resolution training: forced tension notes rescued onto chord tones
+4. Tension architecture across a whole improvisation
+5. Twelve-key matrix UI on top of the existing `/api/coach/key-matrix` data
 6. User authentication and multi-user progress tracking
 
 ## Contributing

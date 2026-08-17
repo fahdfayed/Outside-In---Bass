@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import AxisProfile from './AxisProfile';
 import './SessionSetup.css';
 
 const TEMPOS = [60, 70, 80, 90, 100, 110, 120];
 
-export default function SessionSetup({ onStartSession, loading, recentSessions }) {
+export default function SessionSetup({ onStartSession, loading = false, recentSessions = [] }) {
   const [duration, setDuration] = useState(30);
   const [tempo, setTempo] = useState(90);
   const [sessionType, setSessionType] = useState('adaptive');
@@ -55,7 +56,11 @@ export default function SessionSetup({ onStartSession, loading, recentSessions }
     <div className="session-setup">
       <div className="setup-header">
         <h2>Start Practice Session</h2>
-        <p>Choose your parameters and begin a hands-free practice routine</p>
+        <p>
+          Set your parameters and press Start once. The routine then runs itself —
+          spoken instructions, click, timing and corrections are automatic. The only
+          control you need while playing is the emergency stop.
+        </p>
       </div>
 
       <div className="setup-container">
@@ -210,7 +215,13 @@ export default function SessionSetup({ onStartSession, loading, recentSessions }
             >
               {loading ? 'Initializing...' : 'Start Session'}
             </button>
+            <p className="start-note">
+              Needs microphone access. Headphones and a clean DI signal give the most
+              accurate results.
+            </p>
           </div>
+
+          <AxisProfile />
 
           {recentSessions.length > 0 && (
             <div className="recent-sessions">

@@ -140,7 +140,8 @@ export default function SessionReview({ session, onBack }) {
           <table>
             <thead>
               <tr>
-                <th>Exercise</th>
+                <th>Block</th>
+                <th>Axis</th>
                 <th>Score</th>
                 <th>Correct</th>
                 <th>Wrong</th>
@@ -151,7 +152,11 @@ export default function SessionReview({ session, onBack }) {
             <tbody>
               {metrics.map((metric) => (
                 <tr key={metric.id}>
-                  <td>#{metric.exercise_number}</td>
+                  <td>
+                    #{metric.exercise_number}
+                    {metric.is_repair && <span className="repair-flag">repair</span>}
+                  </td>
+                  <td>{metric.axis ?? '—'}</td>
                   <td>
                     <span className={`score-badge ${metric.score > 75 ? 'good' : metric.score > 60 ? 'ok' : 'poor'}`}>
                       {metric.score.toFixed(1)}%
@@ -184,11 +189,8 @@ export default function SessionReview({ session, onBack }) {
       </div>
 
       <div className="review-actions">
-        <button className="action-button start-again">
+        <button className="action-button" onClick={onBack}>
           Start Another Session
-        </button>
-        <button className="action-button secondary" onClick={onBack}>
-          Back to Studio
         </button>
       </div>
     </div>

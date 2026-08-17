@@ -33,17 +33,33 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
     if (sessionResult.rows.length === 0) {
       return res.status(404).json({ error: 'Session not found' });
     }
-    const { key, mode, tempo } = sessionResult.rows[0];
 
-    const analysis = scoreDetections(detections, key, mode, tempo);
+    // A hands-free block carries its own key/mode/tempo, which can differ from
+    // the session defaults once the tempo has been auto-reduced.
+    const session = sessionResult.rows[0];
+    const key = req.body.key || session.key;
+    const mode = req.body.mode || session.mode;
+    const tempo = parseInt(req.body.tempo, 10) || session.tempo;
+    const axis = req.body.axis || null;
+    const blockType = req.body.blockType || null;
+    const isRepair = req.body.isRepair === 'true';
+
+    const blockSeconds = parseFloat(req.body.blockSeconds);
+    const analysis = scoreDetections(
+      detections,
+      key,
+      mode,
+      tempo,
+      Number.isFinite(blockSeconds) ? blockSeconds : null
+    );
 
     const recording = await db.query(
       `INSERT INTO recordings
          (session_id, exercise_number, audio_data, duration_seconds, detected_notes,
-          accuracy_score, tempo_stability, note_onset_accuracy, metadata)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          accuracy_score, tempo_stability, note_onset_accuracy, metadata, block_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id, session_id, exercise_number, duration_seconds, accuracy_score,
-                 tempo_stability, note_onset_accuracy, created_at`,
+                 tempo_stability, note_onset_accuracy, block_type, created_at`,
       [
         sessionId,
         exerciseNumber,
@@ -53,15 +69,17 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
         analysis.accuracy,
         analysis.tempoStability,
         analysis.timingAccuracy,
-        JSON.stringify(analysis)
+        JSON.stringify(analysis),
+        blockType
       ]
     );
 
     await db.query(
       `INSERT INTO performance_metrics
          (session_id, exercise_number, key, mode, total_notes, correct_notes, wrong_notes,
-          missed_notes, chromatic_notes, timing_offset_ms, register_range, motif_repetitions, score, feedback)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+          missed_notes, chromatic_notes, timing_offset_ms, register_range, motif_repetitions,
+          score, feedback, axis, block_type, is_repair)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [
         sessionId,
         exerciseNumber,
@@ -76,7 +94,10 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
         JSON.stringify(analysis.registerRange),
         analysis.motifRepetitions,
         analysis.accuracy,
-        analysis.feedback
+        analysis.feedback,
+        axis,
+        blockType,
+        isRepair
       ]
     );
 
