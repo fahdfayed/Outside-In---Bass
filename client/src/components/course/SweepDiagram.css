@@ -1,0 +1,31 @@
+.sweep-diagram { margin: 1.25rem 0; }
+.sd-scroll {
+  overflow-x: auto; background: #161616; border: 1px solid #2a2a2a;
+  border-radius: 6px; padding: .5rem;
+}
+.sd-scroll svg { display: block; }
+
+.sd-groups {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: .7rem; margin-top: 1rem;
+}
+.sd-group {
+  background: #202020; border-left: 3px solid #3a7ca5; border-radius: 5px;
+  padding: .7rem .85rem; display: flex; flex-direction: column; gap: .3rem;
+}
+.sd-group-top { display: flex; align-items: baseline; gap: .5rem; }
+.sd-label { color: #fff; font-weight: 700; font-size: 1.05rem; font-family: ui-monospace, monospace; }
+.sd-mode { color: #8d8d8d; font-size: .8rem; }
+.sd-group-detail { display: flex; gap: .55rem; flex-wrap: wrap; font-size: .76rem; color: #777; align-items: center; }
+.sd-group-detail .mono { color: #b5b5b5; }
+.sd-shape {
+  background: #2f2f2f; color: #9ab; padding: .1rem .38rem; border-radius: 3px; font-weight: 700;
+}
+.sd-steps { color: #666; }
+.sd-group-notes {
+  color: #7ee2a8; font-family: ui-monospace, monospace; font-size: .82rem; letter-spacing: 1px;
+}
+
+.sd-legend { display: flex; gap: 1.1rem; margin-top: .85rem; flex-wrap: wrap; }
+.sd-legend span { display: flex; align-items: center; gap: .4rem; color: #888; font-size: .78rem; }
+.sd-legend i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }

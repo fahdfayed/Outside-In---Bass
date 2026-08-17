@@ -9,6 +9,7 @@ import coachRouter from './routes/coach.js';
 import routinesRouter from './routes/routines.js';
 import assessmentRouter from './routes/assessment.js';
 import labRouter from './routes/lab.js';
+import courseRouter from './routes/course.js';
 import db from './db.js';
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.use('/api/coach', coachRouter);
 app.use('/api/routines', routinesRouter);
 app.use('/api/assessment', assessmentRouter);
 app.use('/api/lab', labRouter);
+app.use('/api/course', courseRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

@@ -51,6 +51,35 @@ A complete personal bass-practice environment that takes intermediate bassists f
 - **Twelve-key matrix**: real results per key and mode, with untested combinations
   left blank rather than given invented scores.
 
+### Phase 5: Complete — BASS-301 Theory Course
+A ten-module Berklee-style curriculum built from *The Beast and MILLPAD* source
+documents (Josh Fossgreen's presentation of The Beast, Anthony Wellington's MILLPAD
+organisation), including the corrections both documents make to the widely-circulated
+transcriptions.
+
+- **Beast/MILLPAD engine**: generates any sweep or full traversal in any of the twelve
+  major keys from any in-key fret. Nothing is stored tab — each sweep is generated from
+  the rule (three notes per string), then checked against what MILLPAD predicts, and
+  verified by the unbroken-scale test. If the derivation and the prediction disagree,
+  the generator says so rather than emitting wrong tab.
+- **Ten modules** with prerequisites, learning objectives, theory exposition, live
+  worked examples and exit standards. Modules unlock as their prerequisites are passed.
+- **Auto-graded tests**: questions are *generated* from the engine, so a question can
+  never disagree with the theory it tests. Papers are seeded, so retaking gives a
+  different paper; the answer key never reaches the client. Marking returns per-question
+  explanations and the list of topics to review.
+- **21 exploration passages** (E1–E21) plus four recognition drills, the ten-rung tempo
+  ladder, nine error codes, the eight-step repair protocol and the five checkpoints.
+- **Interactive Beast Generator**: pick a key and an in-key start, see the five-step
+  derivation, a numbered neck diagram colour-coded by shape, the twelve notes as one
+  line with the unbroken-scale verdict, and the tab.
+- **Reference Atlas**: master grid, three shapes, seven starting rows (with the four
+  shift-free rows highlighted), tempo ladder, error codes, repair protocol, checkpoints.
+
+The curriculum keeps the source material's central distinction: a "Phrygian chunk" is a
+hand shape, while "E Phrygian" is music in which E is heard as home. Module 10 is where
+the first is deliberately converted into the second.
+
 ## Technology Stack
 
 - **Frontend**: React + Vite
@@ -151,6 +180,18 @@ The app will be available at http://localhost:3000
 - `GET /api/lab/progress` - Resolution rate overall and per device
 - `GET /api/lab/habits` - Recurring tendencies across recent blocks
 
+### Theory Course (BASS-301)
+- `GET /api/course` - Syllabus with per-module unlock state and best scores
+- `GET /api/course/modules/:number` - Full module with generated worked example
+- `GET /api/course/reference` - Reference atlas (grid, shapes, rows, ladder, error codes)
+- `GET /api/course/exercises` - Exploration passages E1-E21
+- `GET /api/course/beast/sweep` - Generate one sweep for a key/string/fret
+- `GET /api/course/beast/traversal` - Generate a full traversal up the neck and back
+- `GET /api/course/beast/valid-starts` - In-key starting frets for a key and string
+- `GET /api/course/tests/:quizId` - Fetch a seeded paper (no answer key)
+- `POST /api/course/tests/:quizId/submit` - Mark a paper and record the attempt
+- `GET /api/course/progress` - Modules passed, best scores, weak topics
+
 ## Current Features
 
 ### Lessons
@@ -205,11 +246,12 @@ signal gives the most reliable results.
 
 ## Next Steps
 
-1. Beast/MILLPAD retrieval drills and the 30-day routine
+1. Wire the E1-E21 passages into the hands-free routine builder as block types
 2. Tension architecture: planning how tension rises and resolves across a whole solo
 3. Motif training: rhythmic variation, changed endings, octave transfer
 4. Call-and-response and sing-first ear training
-5. User authentication and multi-user progress tracking
+5. Playing assessments for the course (recorded, scored against module exit standards)
+6. User authentication and multi-user progress tracking
 
 ## Contributing
 

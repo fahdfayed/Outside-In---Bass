@@ -1,5 +1,8 @@
 const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-const BASS_TUNING = [40, 45, 50, 55]; // EADG in MIDI note numbers
+// EADG in MIDI note numbers. A four-string bass sounds an octave below the
+// written pitch: the open E is E1 (MIDI 28, 41.2 Hz), not E2. This has to agree
+// with the pitch detector, which reports real MIDI numbers from real frequencies.
+const BASS_TUNING = [28, 33, 38, 43];
 const FRETS = 24;
 
 export function getNoteAtPosition(string, fret) {
