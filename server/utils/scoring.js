@@ -1,7 +1,17 @@
+import { analyzeOutsidePlaying, outsideFeedback } from './outside-analysis.js';
+import { detectHabits, topHabitCue } from './habits.js';
+
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 // Fraction of the expected note count that counts as "played the block".
 const COVERAGE_FLOOR = 0.5;
+
+// Share of notes that must be inside-or-resolved to earn full credit.
+const PITCH_FLOOR = 0.7;
+
+// On an outside-playing block, roughly this share of notes should depart the mode.
+const TARGET_OUTSIDE_RATIO = 0.15;
+const OUTSIDE_ENGAGEMENT_FLOOR = 0.4;
 
 const MODE_INTERVALS = {
   Ionian: [0, 2, 4, 5, 7, 9, 11],
@@ -23,7 +33,14 @@ export function scalePitchClasses(key, mode) {
 // blockSeconds is how long the player was asked to play. Without it, coverage can
 // only be measured between the first and last note, so someone who plays two notes
 // and stops looks as complete as someone who played the whole block.
-export function scoreDetections(detections, key, mode, tempo, blockSeconds = null) {
+export function scoreDetections(
+  detections,
+  key,
+  mode,
+  tempo,
+  blockSeconds = null,
+  { expectOutside = false } = {}
+) {
   const valid = detections.filter(
     (d) => Number.isFinite(d.midi) && Number.isFinite(d.timestamp)
   );
@@ -32,16 +49,11 @@ export function scoreDetections(detections, key, mode, tempo, blockSeconds = nul
     return emptyAnalysis();
   }
 
-  const inScale = new Set(scalePitchClasses(key, mode));
-  const rootIndex = Math.max(0, NOTE_NAMES.indexOf(key));
+  const outside = analyzeOutsidePlaying(valid, key, mode);
+  const habits = detectHabits(valid, key, tempo);
 
-  let correctCount = 0;
-  let chromaticCount = 0;
-  for (const d of valid) {
-    const pitchClass = ((d.midi % 12) + 12) % 12;
-    if (inScale.has(pitchClass)) correctCount++;
-    else chromaticCount++;
-  }
+  const correctCount = outside.insideCount;
+  const chromaticCount = outside.outsideCount;
 
   const expectedNotes = expectedNoteCount(valid, tempo, blockSeconds);
   const missedCount = Math.max(0, expectedNotes - valid.length);
@@ -50,7 +62,13 @@ export function scoreDetections(detections, key, mode, tempo, blockSeconds = nul
   const registerRange = analyzeRegister(valid);
   const motifRepetitions = countMotifRepetitions(valid);
 
-  const pitchAccuracy = correctCount / valid.length;
+  // A chromatic note that resolves is not an error — on an outside-playing block
+  // it is the whole point. Pitch accuracy therefore credits inside notes plus any
+  // outside note that resolved, and only unresolved outside notes count against.
+  const resolvedOutside = outside.resolvedCount;
+  const unresolvedOutside = outside.roles.unresolved;
+  const pitchAccuracy = (correctCount + resolvedOutside) / valid.length;
+
   const coverage = expectedNotes > 0 ? Math.min(1, valid.length / expectedNotes) : 1;
 
   // Coverage has to gate the result, not merely contribute a slice of it. Two
@@ -60,7 +78,22 @@ export function scoreDetections(detections, key, mode, tempo, blockSeconds = nul
   const sufficiency = Math.min(1, coverage / COVERAGE_FLOOR);
   const weighted =
     pitchAccuracy * 0.6 + timing.timingAccuracy * 0.25 + coverage * 0.15;
-  const accuracy = weighted * sufficiency * 100;
+
+  // On a block that asked for outside playing, staying safely inside is not a pass.
+  // The floor keeps this from zeroing a take that was otherwise clean and in time —
+  // the player did play well, just not the exercise.
+  const engagement = expectOutside
+    ? OUTSIDE_ENGAGEMENT_FLOOR +
+      (1 - OUTSIDE_ENGAGEMENT_FLOOR) *
+        Math.min(1, outside.outsideRatio / TARGET_OUTSIDE_RATIO)
+    : 1;
+
+  // Being perfectly in time does not rescue a take where half the notes were wrong.
+  // Timing and coverage together are worth 40% of the weighted sum, which is enough
+  // to pass a block on rhythm alone, so pitch gates the result too.
+  const pitchGate = Math.min(1, pitchAccuracy / PITCH_FLOOR);
+
+  const accuracy = weighted * sufficiency * engagement * pitchGate * 100;
 
   return {
     accuracy: round(accuracy),
@@ -78,14 +111,26 @@ export function scoreDetections(detections, key, mode, tempo, blockSeconds = nul
     registerRange,
     motifRepetitions,
     coverage: round(coverage * 100),
+    outside: {
+      count: outside.outsideCount,
+      ratio: round(outside.outsideRatio * 100),
+      resolvedCount: resolvedOutside,
+      unresolvedCount: unresolvedOutside,
+      resolutionRate: round(outside.resolutionRate * 100),
+      roles: outside.roles
+    },
+    habits: habits.habits,
+    habitMetrics: habits.metrics,
     feedback: buildFeedback({
       pitchAccuracy,
-      chromaticCount,
       total: valid.length,
       timing,
       registerRange,
       motifRepetitions,
-      coverage
+      coverage,
+      outside,
+      habits: habits.habits,
+      expectOutside
     })
   };
 }
@@ -100,6 +145,13 @@ function emptyAnalysis() {
     durationSeconds: 0,
     registerRange: { lowMidi: null, highMidi: null, semitoneSpan: 0 },
     motifRepetitions: 0,
+    coverage: 0,
+    outside: {
+      count: 0, ratio: 0, resolvedCount: 0, unresolvedCount: 0, resolutionRate: 0,
+      roles: { approach: 0, enclosure: 0, passing: 0, sideslip: 0, unresolved: 0 }
+    },
+    habits: [],
+    habitMetrics: null,
     feedback: ['No notes detected. Check your input level and try again.']
   };
 }
@@ -176,7 +228,8 @@ function countMotifRepetitions(detections) {
 }
 
 function buildFeedback({
-  pitchAccuracy, chromaticCount, total, timing, registerRange, motifRepetitions, coverage
+  pitchAccuracy, total, timing, registerRange, motifRepetitions, coverage,
+  outside, habits, expectOutside
 }) {
   const feedback = [];
 
@@ -190,11 +243,12 @@ function buildFeedback({
   }
 
   if (pitchAccuracy < 0.7) {
-    feedback.push('Many notes fell outside the mode. Slow down and target chord tones.');
+    feedback.push('Many notes landed outside the mode without resolving. Target chord tones.');
   }
-  if (chromaticCount / total > 0.3) {
-    feedback.push('Heavy chromatic content — resolve outside notes back into the key.');
-  }
+
+  // Outside notes get judged on whether they resolved, not on merely existing.
+  feedback.push(...outsideFeedback(outside, { expectOutside }));
+
   if (timing.timingAccuracy < 0.6) {
     feedback.push('Timing drifted off the grid. Drop the tempo and lock in with the click.');
   }
@@ -209,6 +263,11 @@ function buildFeedback({
   if (total >= 12 && motifRepetitions > total * 0.4) {
     feedback.push('One contour dominated. Vary your phrasing and endings.');
   }
+
+  // One habit cue at most — a list of tendencies is not actionable mid-session.
+  const cue = topHabitCue(habits);
+  if (cue) feedback.push(cue);
+
   if (feedback.length === 0) {
     feedback.push('Clean pass. Raise the tempo or move to a new key.');
   }

@@ -45,12 +45,14 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
     const isRepair = req.body.isRepair === 'true';
 
     const blockSeconds = parseFloat(req.body.blockSeconds);
+    const expectOutside = req.body.expectOutside === 'true';
     const analysis = scoreDetections(
       detections,
       key,
       mode,
       tempo,
-      Number.isFinite(blockSeconds) ? blockSeconds : null
+      Number.isFinite(blockSeconds) ? blockSeconds : null,
+      { expectOutside }
     );
 
     const recording = await db.query(
@@ -78,8 +80,10 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
       `INSERT INTO performance_metrics
          (session_id, exercise_number, key, mode, total_notes, correct_notes, wrong_notes,
           missed_notes, chromatic_notes, timing_offset_ms, register_range, motif_repetitions,
-          score, feedback, axis, block_type, is_repair)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+          score, feedback, axis, block_type, is_repair,
+          outside_count, outside_resolved, resolution_rate, habits)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+               $18, $19, $20, $21)`,
       [
         sessionId,
         exerciseNumber,
@@ -97,7 +101,11 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
         analysis.feedback,
         axis,
         blockType,
-        isRepair
+        isRepair,
+        analysis.outside.count,
+        analysis.outside.resolvedCount,
+        analysis.outside.resolutionRate,
+        JSON.stringify(analysis.habits)
       ]
     );
 

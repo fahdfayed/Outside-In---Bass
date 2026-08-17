@@ -173,7 +173,11 @@ const db = {
       `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS axis VARCHAR(10)`,
       `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS block_type VARCHAR(20)`,
       `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS is_repair BOOLEAN DEFAULT FALSE`,
-      `ALTER TABLE recordings ADD COLUMN IF NOT EXISTS block_type VARCHAR(20)`
+      `ALTER TABLE recordings ADD COLUMN IF NOT EXISTS block_type VARCHAR(20)`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS outside_count INT DEFAULT 0`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS outside_resolved INT DEFAULT 0`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS resolution_rate DECIMAL(5, 2)`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS habits JSONB`
     ];
 
     for (const migration of migrations) {

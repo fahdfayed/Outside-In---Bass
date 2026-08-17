@@ -6,6 +6,8 @@ import { buildRoutine, buildRepairBlock } from '../utils/routine-builder.js';
 const router = express.Router();
 const coach = new AdaptiveCoach(db);
 
+const OUTSIDE_READINESS_SCORE = 65;
+
 const VALID_KEYS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const VALID_MODES = [
   'Ionian', 'Dorian', 'Phrygian', 'Lydian', 'Mixolydian', 'Aeolian', 'Locrian'
@@ -18,9 +20,17 @@ router.get('/plan', async (req, res) => {
     const tempo = clampTempo(req.query.tempo);
 
     const target = await resolveTarget(req.query);
-    const routine = buildRoutine({ durationSeconds, tempo, ...target });
+    const readiness = await resolveOutsideReadiness(req.query.focus);
+    const routine = buildRoutine({
+      durationSeconds, tempo, ...target, includeOutside: readiness.includeOutside
+    });
 
-    res.json({ ...routine, source: target.source, reasoning: target.reasoning });
+    res.json({
+      ...routine,
+      source: target.source,
+      reasoning: target.reasoning,
+      outsideNote: readiness.note
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -33,7 +43,10 @@ router.post('/start', async (req, res) => {
     const tempo = clampTempo(req.body.tempo);
 
     const target = await resolveTarget(req.body);
-    const routine = buildRoutine({ durationSeconds, tempo, ...target });
+    const readiness = await resolveOutsideReadiness(req.body.focus);
+    const routine = buildRoutine({
+      durationSeconds, tempo, ...target, includeOutside: readiness.includeOutside
+    });
 
     const result = await db.query(
       `INSERT INTO practice_sessions
@@ -52,7 +65,12 @@ router.post('/start', async (req, res) => {
       ]
     );
 
-    res.json({ session: result.rows[0], routine, reasoning: target.reasoning });
+    res.json({
+      session: result.rows[0],
+      routine,
+      reasoning: target.reasoning,
+      outsideNote: readiness.note
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -70,6 +88,47 @@ router.post('/repair', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Chromatic work is unlocked by demonstrated competence, not by asking for it: the
+// player needs the mode itself secure before departing from it. An explicit
+// outside-focused request overrides this.
+async function resolveOutsideReadiness(requested) {
+  if (requested === 'outside') return { includeOutside: true, note: 'Outside work requested.' };
+  if (requested === 'inside') return { includeOutside: false, note: 'Inside-only session requested.' };
+
+  const result = await db.query(
+    `SELECT axis, AVG(score)::numeric(5,2) AS avg_score, COUNT(*) AS attempts
+     FROM performance_metrics
+     WHERE axis IN ('PLAY', 'KNOW')
+     GROUP BY axis`
+  );
+
+  const byAxis = new Map(result.rows.map((r) => [r.axis, r]));
+  const play = byAxis.get('PLAY');
+  const know = byAxis.get('KNOW');
+
+  if (!play || !know) {
+    return {
+      includeOutside: false,
+      note: 'Outside blocks unlock once PLAY and KNOW have been measured.'
+    };
+  }
+
+  const playScore = Number(play.avg_score);
+  const knowScore = Number(know.avg_score);
+
+  if (playScore < OUTSIDE_READINESS_SCORE || knowScore < OUTSIDE_READINESS_SCORE) {
+    return {
+      includeOutside: false,
+      note: `Outside blocks unlock at ${OUTSIDE_READINESS_SCORE}% on PLAY and KNOW (currently ${playScore.toFixed(0)}% and ${knowScore.toFixed(0)}%).`
+    };
+  }
+
+  return {
+    includeOutside: true,
+    note: `Outside blocks unlocked — PLAY ${playScore.toFixed(0)}%, KNOW ${knowScore.toFixed(0)}%.`
+  };
+}
 
 async function resolveTarget({ session_type, key, mode }) {
   if (session_type === 'custom') {

@@ -59,7 +59,14 @@ export default function HandsFreeSession({ config, onFinished, onCancel, onRunni
           {results.map((r, i) => (
             <div key={i} className={`done-row ${r.passed ? 'pass' : 'fail'}`}>
               <span className="done-axis">{AXIS_LABELS[r.axis] ?? r.axis}</span>
-              <span className="done-name">{r.name}</span>
+              <span className="done-name">
+                {r.name}
+                {r.outside?.count > 0 && (
+                  <span className="done-outside">
+                    {r.outside.resolvedCount}/{r.outside.count} outside notes resolved
+                  </span>
+                )}
+              </span>
               <span className="done-score">{r.score.toFixed(0)}%</span>
             </div>
           ))}
@@ -147,6 +154,9 @@ export default function HandsFreeSession({ config, onFinished, onCancel, onRunni
         <div className="hf-readout">
           <span className="hf-readout-label">Key</span>
           <span className="hf-value">{block?.key} {block?.mode}</span>
+          {block?.expectOutside && (
+            <span className="hf-outside-tag">outside</span>
+          )}
         </div>
       </div>
 

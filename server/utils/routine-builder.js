@@ -46,8 +46,52 @@ const PHASES = [
     tempoOffset: -20
   },
   {
+    type: 'approach',
+    share: 0.12,
+    axis: 'PLAY',
+    passScore: 60,
+    expectOutside: true,
+    name: 'Chromatic approach',
+    instruction:
+      'Approach each chord tone of {key} {mode} from a semitone below, then from above. Land on the target every time.',
+    tempoOffset: -20
+  },
+  {
+    type: 'enclosure',
+    share: 0.11,
+    axis: 'PLAY',
+    passScore: 58,
+    expectOutside: true,
+    name: 'Enclosures',
+    instruction:
+      'Enclose each chord tone of {key} {mode}: one note above, one below, then the target. Keep it tight.',
+    tempoOffset: -20
+  },
+  {
+    type: 'sideslip',
+    share: 0.12,
+    axis: 'CREATE',
+    passScore: 55,
+    expectOutside: true,
+    name: 'Side-slipping',
+    instruction:
+      'Play a phrase in {key} {mode}, shift it a semitone away, then slide back home. Make the return sound intended.',
+    tempoOffset: -10
+  },
+  {
+    type: 'resolution',
+    share: 0.11,
+    axis: 'HEAR',
+    passScore: 58,
+    expectOutside: true,
+    name: 'Resolution rescue',
+    instruction:
+      'Deliberately play a wrong note, then rescue it onto the nearest chord tone of {key} {mode}. Do not stop the groove.',
+    tempoOffset: -10
+  },
+  {
     type: 'application',
-    share: 0.25,
+    share: 0.2,
     axis: 'CREATE',
     passScore: 60,
     name: 'Improvisation',
@@ -70,13 +114,23 @@ function fillTemplate(text, { key, mode }) {
   return text.replace(/\{key\}/g, key).replace(/\{mode\}/g, mode);
 }
 
-export function buildRoutine({ durationSeconds, tempo, key, mode }) {
+export function buildRoutine({
+  durationSeconds,
+  tempo,
+  key,
+  mode,
+  includeOutside = true
+}) {
   const practiceSeconds = Math.max(MIN_BLOCK_SECONDS, durationSeconds - COUNT_IN_SECONDS);
+
+  // Chromatic devices only make sense once the mode itself is secure — side-slipping
+  // out of a scale you cannot yet play cleanly teaches nothing.
+  const available = includeOutside ? PHASES : PHASES.filter((p) => !p.expectOutside);
 
   // Short sessions drop the lower-priority phases rather than squeezing every
   // phase below a useful length.
   const maxPhases = Math.max(1, Math.floor(practiceSeconds / MIN_BLOCK_SECONDS));
-  const phases = PHASES.slice(0, Math.min(PHASES.length, maxPhases));
+  const phases = available.slice(0, Math.min(available.length, maxPhases));
   const shareTotal = phases.reduce((sum, p) => sum + p.share, 0);
 
   // Repeat the phase cycle as many times as the session length supports.
@@ -110,6 +164,7 @@ export function buildRoutine({ durationSeconds, tempo, key, mode }) {
         key,
         mode,
         passScore: phase.passScore,
+        expectOutside: Boolean(phase.expectOutside),
         isRepair: false
       });
 
@@ -123,6 +178,7 @@ export function buildRoutine({ durationSeconds, tempo, key, mode }) {
     baseTempo: tempo,
     countInSeconds: COUNT_IN_SECONDS,
     cycles,
+    includesOutside: phases.some((p) => p.expectOutside),
     totalSeconds: cursor,
     blocks
   };
@@ -146,6 +202,9 @@ export function buildRepairBlock(failedBlock, reasons = []) {
     key: failedBlock.key,
     mode: failedBlock.mode,
     passScore: Math.max(40, failedBlock.passScore - 15),
+    // A repair for an outside block still asks for outside notes — the point is to
+    // do the device more simply, not to abandon it.
+    expectOutside: Boolean(failedBlock.expectOutside),
     isRepair: true
   };
 }
@@ -153,7 +212,18 @@ export function buildRepairBlock(failedBlock, reasons = []) {
 function repairInstruction(block, reasons) {
   const { key, mode } = block;
 
-  if (reasons.some((r) => /outside the mode|chromatic/i.test(r))) {
+  // Outside blocks fail for their own reasons, so they get their own repairs.
+  if (block.expectOutside) {
+    if (reasons.some((r) => /stayed entirely inside/i.test(r))) {
+      return `Repair block. Slower now. Play the root of ${key}, then the note a semitone below it, then the root again. That is the whole exercise.`;
+    }
+    if (reasons.some((r) => /left hanging|without resolving/i.test(r))) {
+      return `Repair block. Slower now. One outside note at a time, and resolve it by a semitone into the nearest chord tone of ${key} ${mode} before playing anything else.`;
+    }
+    return `Repair block. Slower now. Approach the root and the fifth of ${key} ${mode} from a semitone below. Nothing else.`;
+  }
+
+  if (reasons.some((r) => /without resolving|chromatic/i.test(r))) {
     return `Repair block. Slower now. Play only the root, third and fifth of ${key} ${mode}. Nothing else.`;
   }
   if (reasons.some((r) => /grid|behind the beat|rushing/i.test(r))) {

@@ -3,6 +3,7 @@ import LessonList from './components/LessonList';
 import LessonViewer from './components/LessonViewer';
 import FretboardTrainer from './components/FretboardTrainer';
 import PracticeStudio from './components/PracticeStudio';
+import InsideOutsideLab from './components/InsideOutsideLab';
 import './App.css';
 
 export default function App() {
@@ -53,6 +54,12 @@ export default function App() {
           >
             Practice Studio
           </button>
+          <button
+            onClick={() => setCurrentView('lab')}
+            className={currentView === 'lab' ? 'active' : ''}
+          >
+            Inside / Outside Lab
+          </button>
         </nav>
       )}
 
@@ -76,6 +83,15 @@ export default function App() {
               ← Back to Lessons
             </button>
             <FretboardTrainer />
+          </>
+        )}
+
+        {currentView === 'lab' && (
+          <>
+            <button onClick={handleBack} className="back-button">
+              ← Back to Lessons
+            </button>
+            <InsideOutsideLab />
           </>
         )}
 

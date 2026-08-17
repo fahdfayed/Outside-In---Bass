@@ -31,6 +31,26 @@ A complete personal bass-practice environment that takes intermediate bassists f
   strong theory cannot mask weak execution. Untested axes stay untested.
 - **Practice debt**: surfaces axes that are weak, untested, or going stale.
 
+### Phase 4: Complete
+- **Outside-note classification**: every chromatic note is classified by the role it
+  actually played — chromatic approach, enclosure, passing tone, side-slip, or
+  unresolved. A chromatic note that resolves by step onto a chord tone is credited,
+  not penalised; only unresolved outside notes count against you.
+- **Inside/Outside Lab**: worked examples of each chromatic device generated for the
+  chosen key and mode, plus your measured resolution rate per device.
+- **Outside routine blocks**: chromatic approach, enclosures, side-slipping and
+  resolution rescue, scored on whether outside notes resolved rather than on scale
+  purity. Staying safely inside on one of these blocks does not pass.
+- **Readiness gating**: outside blocks unlock at 65% on PLAY and KNOW — side-slipping
+  out of a scale you cannot yet play cleanly teaches nothing. An explicit outside
+  focus overrides the gate.
+- **Anti-habit detection**: flags always starting on the root, playing in one
+  direction, running the scale, leaving too little silence, staying in one register,
+  and overplaying strong beats. One cue is spoken per block; the Lab shows recurring
+  tendencies across recent sessions.
+- **Twelve-key matrix**: real results per key and mode, with untested combinations
+  left blank rather than given invented scores.
+
 ## Technology Stack
 
 - **Frontend**: React + Vite
@@ -126,6 +146,11 @@ The app will be available at http://localhost:3000
 - `GET /api/assessment/axes` - Five-axis profile (untested axes stay untested)
 - `GET /api/assessment/debt` - Axes that are weak, untested or stale
 
+### Inside/Outside Lab
+- `GET /api/lab/devices/:key/:mode` - Worked examples of each chromatic device
+- `GET /api/lab/progress` - Resolution rate overall and per device
+- `GET /api/lab/habits` - Recurring tendencies across recent blocks
+
 ## Current Features
 
 ### Lessons
@@ -150,13 +175,19 @@ a transcoder. Pitch detection therefore runs client-side in the Web Audio API's
 `AnalyserNode`, and the detected notes are posted alongside the audio blob. The server
 scores those detections against the session's mode:
 
-- **Pitch accuracy** (60%) — how many notes belong to the target mode
+- **Pitch accuracy** (60%) — notes inside the mode, *plus* outside notes that resolved
 - **Timing** (25%) — note placement against an eighth-note grid derived from the tempo
 - **Coverage** (15%) — notes played versus notes expected for the block's duration
 
-Coverage also *gates* the result: if you played less than half the expected notes, the
-whole score scales down in proportion. Two perfectly-placed notes in a thirty-second
-block is not a pass — there isn't enough playing to judge.
+Three gates then scale the result, because a high weighted average can otherwise hide
+a take that failed at something fundamental:
+
+- **Coverage** — play less than half the expected notes and the score scales down in
+  proportion. Two perfectly-placed notes in a thirty-second block is not a pass.
+- **Pitch** — being perfectly in time does not rescue a take where half the notes were
+  wrong; timing and coverage alone are worth enough to pass a block on rhythm.
+- **Engagement** (outside blocks only) — staying safely inside when the block asked for
+  chromatic departures is not a pass.
 
 Pitch detection uses normalised autocorrelation on a decimated signal rather than an FFT
 bin peak. At bass frequencies an FFT bin is wider than a semitone near the low E, and
@@ -175,11 +206,10 @@ signal gives the most reliable results.
 ## Next Steps
 
 1. Beast/MILLPAD retrieval drills and the 30-day routine
-2. Inside/Outside lab: chromatic approaches, enclosures, side-slipping
-3. Resolution training: forced tension notes rescued onto chord tones
-4. Tension architecture across a whole improvisation
-5. Twelve-key matrix UI on top of the existing `/api/coach/key-matrix` data
-6. User authentication and multi-user progress tracking
+2. Tension architecture: planning how tension rises and resolves across a whole solo
+3. Motif training: rhythmic variation, changed endings, octave transfer
+4. Call-and-response and sing-first ear training
+5. User authentication and multi-user progress tracking
 
 ## Contributing
 

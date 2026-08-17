@@ -94,6 +94,7 @@ export function useHandsFreeSession() {
         form.append('mode', finished.mode);
         form.append('tempo', String(finished.tempo));
         form.append('blockSeconds', String(finished.durationSec));
+        form.append('expectOutside', String(Boolean(finished.expectOutside)));
         form.append('axis', finished.axis);
         form.append('blockType', finished.type);
         form.append('isRepair', String(Boolean(finished.isRepair)));
@@ -116,9 +117,12 @@ export function useHandsFreeSession() {
           name: finished.name,
           axis: finished.axis,
           isRepair: finished.isRepair,
+          expectOutside: Boolean(finished.expectOutside),
           score: analysis.accuracy,
           passed,
-          feedback: analysis.feedback
+          feedback: analysis.feedback,
+          outside: analysis.outside,
+          habits: analysis.habits ?? []
         }
       ]);
       addLog(

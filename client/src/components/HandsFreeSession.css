@@ -203,6 +203,31 @@
   font-variant-numeric: tabular-nums;
 }
 
+.hf-outside-tag {
+  display: inline-block;
+  background: #9b59b6;
+  color: white;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 0.3rem;
+}
+
+.done-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.done-outside {
+  color: #9b59b6;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .hf-value {
   font-size: 1.8rem;
   font-weight: 700;
