@@ -1,0 +1,16 @@
+{
+  "name": "outside-in-bass",
+  "version": "1.0.0",
+  "description": "Complete personal bass-practice environment for learning modes and improvisation",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch server/index.js",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "node server/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
