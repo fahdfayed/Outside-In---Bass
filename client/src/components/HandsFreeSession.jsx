@@ -10,6 +10,10 @@ const AXIS_LABELS = {
   CREATE: 'Create'
 };
 
+// Beast passages are diatonic by construction, so chromatic counts say nothing
+// useful about them.
+const isBeast = (r) => r.type === 'beast' || r.type === 'beast-repair';
+
 function formatTime(seconds) {
   const safe = Math.max(0, Math.floor(seconds));
   return `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
@@ -61,7 +65,20 @@ export default function HandsFreeSession({ config, onFinished, onCancel, onRunni
               <span className="done-axis">{AXIS_LABELS[r.axis] ?? r.axis}</span>
               <span className="done-name">
                 {r.name}
-                {r.outside?.count > 0 && (
+                {r.beast && (
+                  <span className="done-beast">
+                    {r.beast.kind === 'sequence'
+                      ? `${r.beast.inOrderCount}/${r.beast.expectedCount} notes in order`
+                      : r.beast.tripleCount > 0
+                        ? `${r.beast.matchingTriples}/${r.beast.tripleCount} groups correct`
+                        : 'no complete groups detected'}
+                    {r.beast.errors?.length > 0 &&
+                      ` · error ${r.beast.errors.map((e) => e.code).join(', ')}`}
+                  </span>
+                )}
+                {/* Outside-note stats are meaningless on a Beast passage, which is
+                    entirely diatonic — only show them for modal blocks. */}
+                {!r.beast && !isBeast(r) && r.outside?.count > 0 && (
                   <span className="done-outside">
                     {r.outside.resolvedCount}/{r.outside.count} outside notes resolved
                   </span>
@@ -143,7 +160,8 @@ export default function HandsFreeSession({ config, onFinished, onCancel, onRunni
           {/* The block's own tempo is what the click is playing; the routine
               tempo only matters when it has been auto-reduced below it. */}
           <span className="hf-value">{block?.tempo ?? tempo}</span>
-          {tempo < (block?.tempo ?? tempo) && (
+          {block?.rung && <span className="hf-cents">rung {block.rung}</span>}
+          {!block?.rung && tempo < (block?.tempo ?? tempo) && (
             <span className="hf-cents">routine at {tempo}</span>
           )}
         </div>
@@ -156,6 +174,9 @@ export default function HandsFreeSession({ config, onFinished, onCancel, onRunni
           <span className="hf-value">{block?.key} {block?.mode}</span>
           {block?.expectOutside && (
             <span className="hf-outside-tag">outside</span>
+          )}
+          {block?.exerciseId && (
+            <span className="hf-exercise-tag">{block.exerciseId}</span>
           )}
         </div>
       </div>

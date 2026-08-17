@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import db from '../db.js';
 import { scoreDetections } from '../utils/scoring.js';
+import { scoreBeastBlock } from '../utils/beast-scoring.js';
 import { AdaptiveCoach } from '../utils/adaptive-coach.js';
 
 const router = express.Router();
@@ -27,7 +28,7 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
     }
 
     const sessionResult = await db.query(
-      'SELECT key, mode, tempo FROM practice_sessions WHERE id = $1',
+      'SELECT key, mode, tempo, plan FROM practice_sessions WHERE id = $1',
       [sessionId]
     );
     if (sessionResult.rows.length === 0) {
@@ -46,14 +47,30 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
 
     const blockSeconds = parseFloat(req.body.blockSeconds);
     const expectOutside = req.body.expectOutside === 'true';
-    const analysis = scoreDetections(
-      detections,
-      key,
-      mode,
-      tempo,
-      Number.isFinite(blockSeconds) ? blockSeconds : null,
-      { expectOutside }
-    );
+    const exerciseId = req.body.exerciseId || null;
+
+    // The expected sequence is read from the plan this server stored when the session
+    // was created — never from the client, which could otherwise supply its own answer.
+    // Repairs reuse the parent block's index but simplify the passage, so they have no
+    // fixed target and fall back to pitch-set scoring.
+    const planBlock = !isRepair
+      ? findPlanBlock(session.plan, exerciseNumber - 1)
+      : null;
+
+    const beast = planBlock?.target
+      ? scoreBeastBlock(detections, planBlock.target, { blockSeconds, tempo })
+      : null;
+
+    const analysis = beast
+      ? mergeBeastAnalysis(beast, detections, key, mode, tempo, blockSeconds)
+      : scoreDetections(
+          detections,
+          key,
+          mode,
+          tempo,
+          Number.isFinite(blockSeconds) ? blockSeconds : null,
+          { expectOutside }
+        );
 
     const recording = await db.query(
       `INSERT INTO recordings
@@ -81,9 +98,9 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
          (session_id, exercise_number, key, mode, total_notes, correct_notes, wrong_notes,
           missed_notes, chromatic_notes, timing_offset_ms, register_range, motif_repetitions,
           score, feedback, axis, block_type, is_repair,
-          outside_count, outside_resolved, resolution_rate, habits)
+          outside_count, outside_resolved, resolution_rate, habits, exercise_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-               $18, $19, $20, $21)`,
+               $18, $19, $20, $21, $22)`,
       [
         sessionId,
         exerciseNumber,
@@ -105,7 +122,8 @@ router.post('/:sessionId/upload', upload.single('audio'), async (req, res) => {
         analysis.outside.count,
         analysis.outside.resolvedCount,
         analysis.outside.resolutionRate,
-        JSON.stringify(analysis.habits)
+        JSON.stringify(analysis.habits),
+        exerciseId
       ]
     );
 
@@ -139,5 +157,33 @@ router.get('/:sessionId/:exerciseNumber', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+function findPlanBlock(plan, index) {
+  if (!plan || !Array.isArray(plan.blocks)) return null;
+  return plan.blocks.find((b) => b.index === index) ?? null;
+}
+
+/**
+ * A Beast block is scored on its exact target, but the surrounding metrics — timing,
+ * register, habits — are still worth recording, so the two analyses are merged into
+ * the shape the rest of the app already consumes.
+ */
+function mergeBeastAnalysis(beast, detections, key, mode, tempo, blockSeconds) {
+  const base = scoreDetections(
+    detections,
+    key,
+    mode,
+    tempo,
+    Number.isFinite(blockSeconds) ? blockSeconds : null
+  );
+
+  return {
+    ...base,
+    // The sequence result is the authoritative score for this block.
+    accuracy: beast.accuracy,
+    beast,
+    feedback: [...beast.feedback, ...base.feedback.filter((f) => /beat|behind|rushing|tension/i.test(f))]
+  };
+}
 
 export default router;

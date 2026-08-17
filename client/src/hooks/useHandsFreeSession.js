@@ -9,6 +9,13 @@ const ANALYSIS_WINDOW = 4096;
 const CORRECTION_GAP_MS = 12000;
 const TEMPO_DROP = 10;
 
+// The tempo ladder from the source manual; Beast blocks step by rung, not by BPM.
+const TEMPO_LADDER = [
+  { rung: 1, bpm: 40 }, { rung: 2, bpm: 48 }, { rung: 3, bpm: 56 }, { rung: 4, bpm: 63 },
+  { rung: 5, bpm: 40 }, { rung: 6, bpm: 48 }, { rung: 7, bpm: 56 }, { rung: 8, bpm: 63 },
+  { rung: 9, bpm: 72 }, { rung: 10, bpm: 80 }
+];
+
 // Drives a whole routine after one Start press: schedules blocks, listens
 // continuously, scores each block, speaks corrections, and inserts a repair
 // block when a block fails. The only control needed during a run is stop().
@@ -24,6 +31,7 @@ export function useHandsFreeSession() {
   const [log, setLog] = useState([]);
   const [tempo, setTempo] = useState(90);
   const [totalBlocks, setTotalBlocks] = useState(0);
+  const [rung, setRung] = useState(null);
   const [error, setError] = useState(null);
 
   const ctxRef = useRef(null);
@@ -39,6 +47,7 @@ export function useHandsFreeSession() {
   const blockStartRef = useRef(0);
   const sessionStartRef = useRef(0);
   const tempoRef = useRef(90);
+  const rungRef = useRef(null);
   const repairedRef = useRef(new Set());
   const sessionIdRef = useRef(null);
   const stoppedRef = useRef(false);
@@ -48,6 +57,10 @@ export function useHandsFreeSession() {
   // between renders has to go through a ref or they will see stale values.
   const stateRef = useRef('idle');
   const advanceRef = useRef(null);
+  // StrictMode invokes the mount effect twice in a single synchronous commit, so
+  // both start() calls are in flight before either returns. Anything that dedupes
+  // on a response has already lost the race; the guard has to be synchronous.
+  const startingRef = useRef(false);
 
   const setPhase = useCallback((next) => {
     stateRef.current = next;
@@ -95,6 +108,7 @@ export function useHandsFreeSession() {
         form.append('tempo', String(finished.tempo));
         form.append('blockSeconds', String(finished.durationSec));
         form.append('expectOutside', String(Boolean(finished.expectOutside)));
+        if (finished.exerciseId) form.append('exerciseId', finished.exerciseId);
         form.append('axis', finished.axis);
         form.append('blockType', finished.type);
         form.append('isRepair', String(Boolean(finished.isRepair)));
@@ -116,12 +130,15 @@ export function useHandsFreeSession() {
         {
           name: finished.name,
           axis: finished.axis,
+          type: finished.type,
+          exerciseId: finished.exerciseId ?? null,
           isRepair: finished.isRepair,
           expectOutside: Boolean(finished.expectOutside),
           score: analysis.accuracy,
           passed,
           feedback: analysis.feedback,
           outside: analysis.outside,
+          beast: analysis.beast ?? null,
           habits: analysis.habits ?? []
         }
       ]);
@@ -130,14 +147,29 @@ export function useHandsFreeSession() {
       );
 
       // Unstable timing slows the whole routine down, not just this block.
+      // Beast blocks move by tempo-ladder rungs, which is how the source manual
+      // specifies tempo; modal blocks step down in BPM.
       if (analysis.tempoStability < 60 && tempoRef.current > 50) {
-        tempoRef.current = Math.max(50, tempoRef.current - TEMPO_DROP);
-        setTempo(tempoRef.current);
-        speechRef.current?.speak(
-          `Timing is unstable. Dropping the tempo to ${tempoRef.current}.`,
-          { priority: 2 }
-        );
-        addLog(`Tempo reduced to ${tempoRef.current} BPM.`);
+        if (finished.rung) {
+          rungRef.current = Math.max(1, (rungRef.current ?? finished.rung) - 1);
+          const bpm = TEMPO_LADDER[rungRef.current - 1]?.bpm ?? 40;
+          tempoRef.current = bpm;
+          setTempo(bpm);
+          setRung(rungRef.current);
+          speechRef.current?.speak(
+            `Timing is unstable. Down to rung ${rungRef.current}, ${bpm} beats per minute.`,
+            { priority: 2 }
+          );
+          addLog(`Dropped to rung ${rungRef.current} (${bpm} BPM).`);
+        } else {
+          tempoRef.current = Math.max(50, tempoRef.current - TEMPO_DROP);
+          setTempo(tempoRef.current);
+          speechRef.current?.speak(
+            `Timing is unstable. Dropping the tempo to ${tempoRef.current}.`,
+            { priority: 2 }
+          );
+          addLog(`Tempo reduced to ${tempoRef.current} BPM.`);
+        }
       } else if (analysis.feedback?.length) {
         speechRef.current?.speak(analysis.feedback[0], {
           priority: 1,
@@ -170,6 +202,11 @@ export function useHandsFreeSession() {
     const blockTempo = next.isRepair
       ? next.tempo
       : Math.min(next.tempo, tempoRef.current);
+
+    if (next.rung) {
+      rungRef.current = Math.min(rungRef.current ?? next.rung, next.rung);
+      setRung(rungRef.current);
+    }
 
     metronomeRef.current?.setTempo(blockTempo);
     trackerRef.current?.reset();
@@ -217,7 +254,16 @@ export function useHandsFreeSession() {
   advanceRef.current = advance;
 
   const start = useCallback(
-    async ({ sessionType, durationSeconds, tempo: requestedTempo, key, mode }) => {
+    async ({ sessionType, durationSeconds, tempo: requestedTempo, key, mode, rung }) => {
+      if (startingRef.current) {
+        // A start is already in flight. The teardown that ran between StrictMode's
+        // two effect invocations raised the stop flag; clear it so the in-flight
+        // start is not left inert, then let this duplicate call fall away.
+        stoppedRef.current = false;
+        return null;
+      }
+      startingRef.current = true;
+
       setError(null);
       setResults([]);
       setLog([]);
@@ -232,6 +278,7 @@ export function useHandsFreeSession() {
           session_type: sessionType,
           duration_seconds: durationSeconds,
           tempo: requestedTempo,
+          rung,
           key,
           mode
         });
@@ -240,6 +287,7 @@ export function useHandsFreeSession() {
       } catch (err) {
         setError('Could not build the routine. Is the server running?');
         setPhase('error');
+        startingRef.current = false;
         return null;
       }
 
@@ -247,6 +295,8 @@ export function useHandsFreeSession() {
       queueRef.current = routine.blocks.map((b) => ({ ...b }));
       setTotalBlocks(queueRef.current.length);
       tempoRef.current = routine.baseTempo;
+      rungRef.current = routine.baseRung ?? null;
+      setRung(routine.baseRung ?? null);
       setTempo(routine.baseTempo);
 
       let stream;
@@ -261,6 +311,7 @@ export function useHandsFreeSession() {
       } catch (err) {
         setError('Microphone access is required for a hands-free session.');
         setPhase('error');
+        startingRef.current = false;
         return null;
       }
 
@@ -333,6 +384,7 @@ export function useHandsFreeSession() {
         }
       }, 200);
 
+      startingRef.current = false;
       return { session, routine };
     },
     [advance, startBlock, state]
@@ -362,6 +414,7 @@ export function useHandsFreeSession() {
     results,
     log,
     tempo,
+    rung,
     error,
     totalBlocks,
     sessionId: sessionIdRef.current,

@@ -2,6 +2,9 @@ import express from 'express';
 import db from '../db.js';
 import { AdaptiveCoach } from '../utils/adaptive-coach.js';
 import { buildRoutine, buildRepairBlock } from '../utils/routine-builder.js';
+import {
+  buildBeastRoutine, buildBeastRepair, unlockedLevels, lockedLevels, clampRung, LEVELS
+} from '../utils/beast-routine.js';
 
 const router = express.Router();
 const coach = new AdaptiveCoach(db);
@@ -18,6 +21,10 @@ router.get('/plan', async (req, res) => {
   try {
     const durationSeconds = clampDuration(req.query.duration_seconds);
     const tempo = clampTempo(req.query.tempo);
+
+    if (req.query.session_type === 'beast') {
+      return res.json(await beastPlan(req.query, durationSeconds));
+    }
 
     const target = await resolveTarget(req.query);
     const readiness = await resolveOutsideReadiness(req.query.focus);
@@ -41,6 +48,25 @@ router.post('/start', async (req, res) => {
   try {
     const durationSeconds = clampDuration(req.body.duration_seconds);
     const tempo = clampTempo(req.body.tempo);
+
+    if (req.body.session_type === 'beast') {
+      const plan = await beastPlan(req.body, durationSeconds);
+
+      const created = await db.query(
+        `INSERT INTO practice_sessions
+           (session_type, duration_seconds, status, tempo, key, mode, exercises_total, plan)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        ['beast', plan.totalSeconds, 'active', plan.baseTempo, plan.key, plan.mode,
+         plan.blocks.length, JSON.stringify(plan)]
+      );
+      return res.json({
+        session: created.rows[0],
+        routine: plan,
+        reasoning: plan.unlockNote,
+        unlockNote: plan.unlockNote
+      });
+    }
 
     const target = await resolveTarget(req.body);
     const readiness = await resolveOutsideReadiness(req.body.focus);
@@ -83,7 +109,12 @@ router.post('/repair', (req, res) => {
     if (!block || typeof block !== 'object') {
       return res.status(400).json({ error: 'block is required' });
     }
-    res.json(buildRepairBlock(block, Array.isArray(reasons) ? reasons : []));
+    const why = Array.isArray(reasons) ? reasons : [];
+    res.json(
+      block.type === 'beast'
+        ? buildBeastRepair(block, why)
+        : buildRepairBlock(block, why)
+    );
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -128,6 +159,43 @@ async function resolveOutsideReadiness(requested) {
     includeOutside: true,
     note: `Outside blocks unlocked — PLAY ${playScore.toFixed(0)}%, KNOW ${knowScore.toFixed(0)}%.`
   };
+}
+
+// Which Beast passages the player has earned, and a plain statement of what is
+// still locked and by what.
+async function beastPlan(source, durationSeconds) {
+  const passed = await passedQuizzes();
+  const open = unlockedLevels(passed);
+  const locked = lockedLevels(passed);
+
+  const routine = buildBeastRoutine({
+    durationSeconds,
+    rung: clampRung(source.rung),
+    key: VALID_KEYS.includes(source.key) ? source.key : 'C',
+    levels: open.map((l) => l.level)
+  });
+
+  const unlockNote = locked.length === 0
+    ? 'Every passage is unlocked.'
+    : `Unlocked: ${open.map((l) => l.name).join(', ')}. Still locked: ` +
+      locked.map((l) => `${l.name} (${l.unlockedBy})`).join('; ');
+
+  return {
+    ...routine,
+    unlockNote,
+    unlocked: open.map((l) => ({ level: l.level, name: l.name, exercises: l.exercises })),
+    locked: locked.map((l) => ({ level: l.level, name: l.name, unlockedBy: l.unlockedBy }))
+  };
+}
+
+async function passedQuizzes() {
+  try {
+    const r = await db.query('SELECT quiz_id FROM course_progress WHERE passed = TRUE');
+    return new Set(r.rows.map((row) => row.quiz_id));
+  } catch (err) {
+    console.error('Could not read course progress:', err);
+    return new Set();
+  }
 }
 
 async function resolveTarget({ session_type, key, mode }) {

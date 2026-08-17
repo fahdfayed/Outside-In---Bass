@@ -327,3 +327,21 @@
   .hf-remaining { font-size: 3rem; }
   .count-number { font-size: 6rem; }
 }
+
+.hf-exercise-tag {
+  display: inline-block;
+  background: #2ecc71;
+  color: #10240f;
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 0.3rem;
+}
+
+.done-beast {
+  color: #2ecc71;
+  font-size: 0.78rem;
+  font-weight: 600;
+}

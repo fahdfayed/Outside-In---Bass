@@ -178,6 +178,7 @@ const db = {
       `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS outside_resolved INT DEFAULT 0`,
       `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS resolution_rate DECIMAL(5, 2)`,
       `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS habits JSONB`,
+      `ALTER TABLE performance_metrics ADD COLUMN IF NOT EXISTS exercise_id VARCHAR(10)`,
       `CREATE TABLE IF NOT EXISTS course_progress (
         quiz_id VARCHAR(10) PRIMARY KEY,
         attempts INT DEFAULT 0,

@@ -101,12 +101,12 @@ const PHASES = [
   }
 ];
 
-const COUNT_IN_SECONDS = 12;
-const MIN_BLOCK_SECONDS = 60;
+export const COUNT_IN_SECONDS = 12;
+export const MIN_BLOCK_SECONDS = 60;
 // Blocks stay short so long sessions rotate through the phases repeatedly
 // (spaced retrieval) instead of sitting on one exercise for twenty minutes.
-const MAX_BLOCK_SECONDS = 240;
-const TARGET_BLOCK_SECONDS = 150;
+export const MAX_BLOCK_SECONDS = 240;
+export const TARGET_BLOCK_SECONDS = 150;
 export const REPAIR_SECONDS = 90;
 export const REPAIR_TEMPO_DROP = 20;
 
