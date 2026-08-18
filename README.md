@@ -131,25 +131,23 @@ cd server; npm install; cd ..
 Copy-Item .env.example .env      # then edit .env with your database credentials
 ```
 
-Create the database. If the PostgreSQL `bin` folder is on your PATH:
-
-```powershell
-createdb -U postgres bass_practice
-```
-
-If it is not on your PATH, either use the full path
-(`& "C:\Program Files\PostgreSQL\16\bin\createdb.exe" -U postgres bass_practice`),
-create the database in pgAdmin, or run:
-
-```powershell
-psql -U postgres -c "CREATE DATABASE bass_practice;"
-```
-
 Then start both servers:
 
 ```powershell
 npm run dev
 ```
+
+You do not need to create the database by hand. On first run the server connects to
+the `postgres` maintenance database, creates `bass_practice` if it is missing, and
+builds the schema:
+
+```
+Created database "bass_practice"
+Database connected
+```
+
+This matters on Windows in particular, where the PostgreSQL `bin` folder is not added
+to PATH by default, so `createdb` is simply not a recognised command.
 
 Note: use `;` rather than `&&` to chain commands in Windows PowerShell 5.1 — `&&`
 only works in PowerShell 7+. The npm scripts themselves run through `cmd.exe`, so
@@ -163,9 +161,10 @@ cd client && npm install && cd ..
 cd server && npm install && cd ..
 
 cp .env.example .env             # then edit .env with your database credentials
-createdb bass_practice
 npm run dev
 ```
+
+The server creates the `bass_practice` database on first run if it does not exist.
 
 ### First run
 
@@ -182,6 +181,18 @@ From PowerShell:
 Invoke-RestMethod -Method Post http://localhost:5000/api/lessons/seed
 Invoke-RestMethod -Method Post http://localhost:5000/api/fretboard/modes/seed
 ```
+
+### If the server will not start
+
+The server names the two common failures rather than dumping a stack trace.
+
+`Could not reach PostgreSQL at localhost:5432` — PostgreSQL is not running. On
+Windows, open Services and start `postgresql-x64-<version>`.
+
+`Password authentication failed for user "postgres"` — the credentials in `.env` do
+not match your install. Edit `DB_USER` and `DB_PASSWORD`.
+
+Set `DB_DEBUG=1` to log every SQL statement while diagnosing.
 
 ### Microphone
 

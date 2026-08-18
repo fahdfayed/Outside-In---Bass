@@ -5,26 +5,91 @@ dotenv.config();
 
 const { Pool } = pkg;
 
-const pool = new Pool({
+const connection = {
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'bass_practice'
-});
+  port: process.env.DB_PORT || 5432
+};
+
+const DATABASE = process.env.DB_NAME || 'bass_practice';
+
+const pool = new Pool({ ...connection, database: DATABASE });
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
+// Per-query logging is noise in normal operation; set DB_DEBUG=1 to see it.
+const DEBUG_SQL = process.env.DB_DEBUG === '1';
+const oneLine = (sql) => sql.replace(/\s+/g, ' ').trim().slice(0, 120);
+
+// Postgres reports "database does not exist" as SQLSTATE 3D000.
+const UNDEFINED_DATABASE = '3D000';
+
+/**
+ * Create the application database if it is missing.
+ *
+ * Requiring a separate `createdb` step is a real obstacle on Windows, where the
+ * PostgreSQL bin folder is not on PATH by default and the command simply is not
+ * found. The server can do it itself by connecting to the always-present
+ * `postgres` maintenance database.
+ */
+async function createDatabaseIfMissing() {
+  const admin = new Pool({ ...connection, database: 'postgres' });
+  try {
+    const exists = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [
+      DATABASE
+    ]);
+    if (exists.rowCount === 0) {
+      // The database name cannot be parameterised, so it is quoted as an identifier.
+      await admin.query(`CREATE DATABASE "${DATABASE.replace(/"/g, '""')}"`);
+      console.log(`Created database "${DATABASE}"`);
+    }
+    return true;
+  } catch (err) {
+    console.error(`Could not create database "${DATABASE}":`, err.message);
+    return false;
+  } finally {
+    await admin.end().catch(() => {});
+  }
+}
+
+function explainConnectionFailure(err) {
+  if (err.code === 'ECONNREFUSED') {
+    return (
+      `Could not reach PostgreSQL at ${connection.host}:${connection.port}. ` +
+      'Is the server running? On Windows, check the "postgresql-x64-<version>" ' +
+      'service in Services, or run: pg_ctl status'
+    );
+  }
+  if (err.code === '28P01') {
+    return (
+      `Password authentication failed for user "${connection.user}". ` +
+      'Check DB_USER and DB_PASSWORD in your .env file.'
+    );
+  }
+  return err.message;
+}
+
 const db = {
   async init() {
+    try {
+      // Expected to fail on a fresh machine, so it is probed quietly.
+      await this.query('SELECT NOW()', undefined, { quiet: true });
+    } catch (err) {
+      if (err.code !== UNDEFINED_DATABASE || !(await createDatabaseIfMissing())) {
+        console.error('Database connection failed:', explainConnectionFailure(err));
+        process.exit(1);
+      }
+    }
+
     try {
       await this.query('SELECT NOW()');
       console.log('Database connected');
       await this.createTables();
     } catch (err) {
-      console.error('Database connection failed', err);
+      console.error('Database connection failed:', explainConnectionFailure(err));
       process.exit(1);
     }
   },
@@ -199,15 +264,22 @@ const db = {
     }
   },
 
-  async query(text, params) {
+  async query(text, params, { quiet = false } = {}) {
     const start = Date.now();
     try {
       const res = await pool.query(text, params);
-      const duration = Date.now() - start;
-      console.log('Executed query', { text, duration, rows: res.rowCount });
+      if (DEBUG_SQL) {
+        console.log('SQL', { text: oneLine(text), ms: Date.now() - start, rows: res.rowCount });
+      }
       return res;
     } catch (error) {
-      console.error('Database query error', { text, error });
+      // Log the message, not the whole error object. Callers that can say
+      // something more useful — init(), for one — do so and would otherwise be
+      // buried under a page of stack trace.
+      if (!quiet) {
+        console.error(`SQL error (${error.code ?? 'no code'}): ${error.message}`);
+        if (DEBUG_SQL) console.error('  in:', oneLine(text));
+      }
       throw error;
     }
   }
