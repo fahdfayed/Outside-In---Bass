@@ -56,7 +56,7 @@ async function createDatabaseIfMissing() {
 }
 
 function explainConnectionFailure(err) {
-  if (err.code === 'ECONNREFUSED') {
+  if (err.code === 'ECONNREFUSED' || err.code === 'ENOENT') {
     return (
       `Could not reach PostgreSQL at ${connection.host}:${connection.port}. ` +
       'Is the server running? On Windows, check the "postgresql-x64-<version>" ' +
@@ -72,26 +72,45 @@ function explainConnectionFailure(err) {
   return err.message;
 }
 
+const RETRY_SECONDS = 5;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const db = {
+  // True once the schema is in place and routes can safely query.
+  ready: false,
+
+  /**
+   * Wait for PostgreSQL rather than exiting.
+   *
+   * Exiting looks tidy but behaves badly under `node --watch`, which traps the
+   * exit and parks the process — so the API never comes up, the Vite proxy floods
+   * the console with ECONNREFUSED, and the one line explaining why scrolls away.
+   * Retrying instead means you can start PostgreSQL after the app and it simply
+   * connects, with no restart.
+   */
   async init() {
-    try {
-      // Expected to fail on a fresh machine, so it is probed quietly.
-      await this.query('SELECT NOW()', undefined, { quiet: true });
-    } catch (err) {
-      if (err.code !== UNDEFINED_DATABASE || !(await createDatabaseIfMissing())) {
-        console.error('Database connection failed:', explainConnectionFailure(err));
-        process.exit(1);
+    let explained = false;
+
+    for (;;) {
+      try {
+        await this.query('SELECT NOW()', undefined, { quiet: true });
+        break;
+      } catch (err) {
+        if (err.code === UNDEFINED_DATABASE && (await createDatabaseIfMissing())) {
+          continue;
+        }
+        if (!explained) {
+          console.error('Database unavailable:', explainConnectionFailure(err));
+          console.error(`Retrying every ${RETRY_SECONDS}s — start PostgreSQL and this will connect on its own.`);
+          explained = true;
+        }
+        await sleep(RETRY_SECONDS * 1000);
       }
     }
 
-    try {
-      await this.query('SELECT NOW()');
-      console.log('Database connected');
-      await this.createTables();
-    } catch (err) {
-      console.error('Database connection failed:', explainConnectionFailure(err));
-      process.exit(1);
-    }
+    console.log('Database connected');
+    await this.createTables();
+    this.ready = true;
   },
 
   async createTables() {

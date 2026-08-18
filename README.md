@@ -182,17 +182,33 @@ Invoke-RestMethod -Method Post http://localhost:5000/api/lessons/seed
 Invoke-RestMethod -Method Post http://localhost:5000/api/fretboard/modes/seed
 ```
 
-### If the server will not start
+### If the database is not up
 
-The server names the two common failures rather than dumping a stack trace.
+The app starts anyway and waits for it. You will see:
 
-`Could not reach PostgreSQL at localhost:5432` — PostgreSQL is not running. On
-Windows, open Services and start `postgresql-x64-<version>`.
+```
+[server] Database unavailable: Could not reach PostgreSQL at localhost:5432. ...
+[server] Retrying every 5s — start PostgreSQL and this will connect on its own.
+```
+
+Start the PostgreSQL service and it connects by itself — no restart. Until then the
+API answers `503` with an explanation rather than refusing connections, so the Vite
+proxy does not flood the console.
+
+The two common causes:
+
+`Could not reach PostgreSQL at localhost:5432` — the service is not running. On
+Windows, open Services and start `postgresql-x64-<version>`, or:
+
+```powershell
+Start-Service postgresql-x64-16     # adjust to your version
+```
 
 `Password authentication failed for user "postgres"` — the credentials in `.env` do
 not match your install. Edit `DB_USER` and `DB_PASSWORD`.
 
-Set `DB_DEBUG=1` to log every SQL statement while diagnosing.
+Check status any time with `http://localhost:5000/api/health`, which reports
+`"database": "connected"` or `"waiting"`. Set `DB_DEBUG=1` to log every SQL statement.
 
 ### Microphone
 
