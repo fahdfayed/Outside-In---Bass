@@ -118,30 +118,77 @@ created, so the client never supplies the answer it is being marked against.
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 18.11 or later (the dev server uses `node --watch`)
 - PostgreSQL 12+ (or configure a remote database)
 
-### Installation
+### Installation — Windows (PowerShell)
 
-1. Install dependencies:
+```powershell
+npm install
+cd client; npm install; cd ..
+cd server; npm install; cd ..
+
+Copy-Item .env.example .env      # then edit .env with your database credentials
+```
+
+Create the database. If the PostgreSQL `bin` folder is on your PATH:
+
+```powershell
+createdb -U postgres bass_practice
+```
+
+If it is not on your PATH, either use the full path
+(`& "C:\Program Files\PostgreSQL\16\bin\createdb.exe" -U postgres bass_practice`),
+create the database in pgAdmin, or run:
+
+```powershell
+psql -U postgres -c "CREATE DATABASE bass_practice;"
+```
+
+Then start both servers:
+
+```powershell
+npm run dev
+```
+
+Note: use `;` rather than `&&` to chain commands in Windows PowerShell 5.1 — `&&`
+only works in PowerShell 7+. The npm scripts themselves run through `cmd.exe`, so
+they work on Windows unchanged.
+
+### Installation — macOS / Linux
+
 ```bash
 npm install
 cd client && npm install && cd ..
 cd server && npm install && cd ..
-```
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your database credentials
-```
-
-3. Start development servers:
-```bash
+cp .env.example .env             # then edit .env with your database credentials
+createdb bass_practice
 npm run dev
 ```
 
-The app will be available at http://localhost:3000
+### First run
+
+The app will be available at http://localhost:3000. Seed the content once:
+
+```
+POST http://localhost:5000/api/lessons/seed
+POST http://localhost:5000/api/fretboard/modes/seed
+```
+
+From PowerShell:
+
+```powershell
+Invoke-RestMethod -Method Post http://localhost:5000/api/lessons/seed
+Invoke-RestMethod -Method Post http://localhost:5000/api/fretboard/modes/seed
+```
+
+### Microphone
+
+The Practice Studio needs microphone access. Browsers only grant it on `localhost`
+or over HTTPS, so `http://localhost:3000` is fine but reaching the dev server by LAN
+IP is not. Headphones and a clean DI or audio-interface signal give the most accurate
+pitch detection.
 
 ## Project Structure
 
