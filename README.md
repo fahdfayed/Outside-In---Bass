@@ -1,360 +1,108 @@
-# Outside In — Bass Modes Lab
+# vinext-starter
 
-A complete personal bass-practice environment that takes intermediate bassists from knowing scales and shapes to confidently improvising across the entire fretboard.
+A clean full-stack starter running on
+[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
+Drizzle support.
 
-## Features
+## Prerequisites
 
-### Phase 1: Complete
-- **Lesson Content & Curriculum**: structured course covering fretboard geography, modes, and improvisation techniques
-- **Fretboard Trainer**: visual mode shape explorer across all 4 strings, highlighting the root and each mode's characteristic tone
+- Node.js `>=22.13.0`
+- Linux with `flock`, `curl`, and GNU `timeout`
 
-### Phase 2: Complete
-- **Practice Studio**: timed sessions with a per-exercise timer, progress tracking and an emergency stop
-- **Listening Engine**: live pitch detection in the browser via the Web Audio API, showing the detected note and frequency as you play
-- **Recording & Scoring**: each take is scored on pitch accuracy against the mode, timing against the beat grid, register span and motif repetition
-- **Adaptive Coach**: analyses recorded evidence to pick the next session's key and mode, and recommends matching exercises
-- **Session Review**: per-exercise metrics, strengths, weak areas and coach feedback
+## Sites Lifecycle
 
-### Phase 3: Complete
-- **Hands-free routines**: press Start once and the whole session runs itself — spoken
-  instructions, count-in, click track, block transitions and corrections are automatic.
-  The emergency stop is the only control, and the surrounding navigation is hidden
-  while audio is live so a stray click cannot tear down the session.
-- **Routine planner**: builds a fully-timed block plan from the session length, cycling
-  through warm-up → retrieval → drill → ear → improvisation. Long sessions rotate
-  through the phases repeatedly rather than sitting on one exercise.
-- **Automatic repair blocks**: a block that misses its pass score earns one focused
-  90-second repair at a reduced tempo, with an instruction targeted at the actual
-  failure (wrong notes, timing, or register).
-- **Automatic tempo reduction**: unstable timing drops the tempo for the rest of the run.
-- **Five-axis assessment**: HEAR / SEE / KNOW / PLAY / CREATE tracked separately, so
-  strong theory cannot mask weak execution. Untested axes stay untested.
-- **Practice debt**: surfaces axes that are weak, untested, or going stale.
+The Sites lifecycle CLI runs the locked dependency install before returning this checkout. Edit the source under `app/`, then checkpoint when a coherent milestone is ready to inspect or share. The remote Sites builder runs `npm run build` against the pushed commit. Do not repeat install or build as a normal pre-checkpoint step.
 
-### Phase 4: Complete
-- **Outside-note classification**: every chromatic note is classified by the role it
-  actually played — chromatic approach, enclosure, passing tone, side-slip, or
-  unresolved. A chromatic note that resolves by step onto a chord tone is credited,
-  not penalised; only unresolved outside notes count against you.
-- **Inside/Outside Lab**: worked examples of each chromatic device generated for the
-  chosen key and mode, plus your measured resolution rate per device.
-- **Outside routine blocks**: chromatic approach, enclosures, side-slipping and
-  resolution rescue, scored on whether outside notes resolved rather than on scale
-  purity. Staying safely inside on one of these blocks does not pass.
-- **Readiness gating**: outside blocks unlock at 65% on PLAY and KNOW — side-slipping
-  out of a scale you cannot yet play cleanly teaches nothing. An explicit outside
-  focus overrides the gate.
-- **Anti-habit detection**: flags always starting on the root, playing in one
-  direction, running the scale, leaving too little silence, staying in one register,
-  and overplaying strong beats. One cue is spoken per block; the Lab shows recurring
-  tendencies across recent sessions.
-- **Twelve-key matrix**: real results per key and mode, with untested combinations
-  left blank rather than given invented scores.
+This starter does not use `wrangler.jsonc`.
 
-### Phase 5: Complete — BASS-301 Theory Course
-A ten-module Berklee-style curriculum built from *The Beast and MILLPAD* source
-documents (Josh Fossgreen's presentation of The Beast, Anthony Wellington's MILLPAD
-organisation), including the corrections both documents make to the widely-circulated
-transcriptions.
+`install:ci` is intentionally a single, non-retrying `npm ci`. It refuses a concurrent install for the same project, consumes a matching image-seeded npm cache with `--prefer-offline` while retaining registry fallback for a missing cache object, otherwise downloads and verifies the complete vinext tarball recorded in `package-lock.json`, limits npm to one socket, and terminates a stalled install. `build` applies a short timeout and then validates the Sites artifact. These helpers target Linux and use GNU `timeout`; they are not native macOS scripts.
 
-- **Beast/MILLPAD engine**: generates any sweep or full traversal in any of the twelve
-  major keys from any in-key fret. Nothing is stored tab — each sweep is generated from
-  the rule (three notes per string), then checked against what MILLPAD predicts, and
-  verified by the unbroken-scale test. If the derivation and the prediction disagree,
-  the generator says so rather than emitting wrong tab.
-- **Ten modules** with prerequisites, learning objectives, theory exposition, live
-  worked examples and exit standards. Modules unlock as their prerequisites are passed.
-- **Auto-graded tests**: questions are *generated* from the engine, so a question can
-  never disagree with the theory it tests. Papers are seeded, so retaking gives a
-  different paper; the answer key never reaches the client. Marking returns per-question
-  explanations and the list of topics to review.
-- **21 exploration passages** (E1–E21) plus four recognition drills, the ten-rung tempo
-  ladder, nine error codes, the eight-step repair protocol and the five checkpoints.
-- **Interactive Beast Generator**: pick a key and an in-key start, see the five-step
-  derivation, a numbered neck diagram colour-coded by shape, the twelve notes as one
-  line with the unbroken-scale verdict, and the tab.
-- **Reference Atlas**: master grid, three shapes, seven starting rows (with the four
-  shift-free rows highlighted), tempo ladder, error codes, repair protocol, checkpoints.
+Scripts that need writable project-scoped home, npm, XDG, and temporary paths use `scripts/sites-env.sh`. The `dev` and `start` scripts honor the caller's runtime environment and keep Wrangler logs inside the checkout. The generated `.sites-runtime/` directory is disposable and ignored by Git.
 
-The curriculum keeps the source material's central distinction: a "Phrygian chunk" is a
-hand shape, while "E Phrygian" is music in which E is heard as home. Module 10 is where
-the first is deliberately converted into the second.
+## Included Shape
 
-### Phase 6: Complete — Beast passages as runnable practice blocks
-The E1–E21 passages are no longer reference-only; they run in the hands-free studio as
-a third session type alongside Adaptive and Custom.
+- edit site code under `app/`
+- `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
+- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
+- `vite.config.ts` simulates declared bindings for local development
+- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
+- `db/schema.ts` starts intentionally empty
+- `examples/d1/` contains an optional D1 example surface
+- `drizzle.config.ts` supports local migration generation when needed
 
-- **Sequence scoring.** Every other block type is scored on pitch-set membership
-  ("were your notes in the key?"), which is the right question for improvisation. A
-  Beast passage has an *exact* expected note sequence generated by the MILLPAD engine,
-  so it is scored on whether the right notes arrived in the right order. A take with
-  the correct pitch set played backwards scores 0% — something pitch-set scoring can
-  never detect.
-- **Error codes from the manual.** Failures are mapped onto the source document's own
-  vocabulary: **S** when groups are cut short (crossing after two notes), **T** when the
-  turnaround note is repeated, **D** for direction, **N** for wrong pitches, **C** when a
-  shape comes out as the wrong one — reported as "8 groups came out as 1-2-4 instead of
-  WS-WS".
-- **Progress gating.** Passages unlock as the module that teaches them is passed:
-  shape isolation from the start, sweeps and turnarounds after Module 6, deformations
-  after Module 7, transposition after Module 8, modal conversion after Module 10. The
-  setup screen shows what is unlocked and what each locked group is waiting on.
-- **Tempo by ladder rung.** Beast blocks are set and adjusted by the manual's ten-rung
-  ladder rather than raw BPM, and unstable timing drops a rung rather than 10 BPM. A
-  passage never runs above its own declared ceiling.
-- **Targeted repairs.** A failed Beast block earns a repair aimed at the diagnosed
-  fault — a string error gets "three notes per string, counted out loud, one string
-  only"; a turn error gets "just the turn, say *turn* on the extra note".
+## Workspace Auth Headers
 
-The expected sequence is resolved server-side from the plan stored when the session was
-created, so the client never supplies the answer it is being marked against.
+OpenAI workspace sites can read the current user's email from
+`oai-authenticated-user-email`.
 
-## Technology Stack
+SIWC-authenticated workspace sites may also receive
+`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
+`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
+`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
 
-- **Frontend**: React + Vite
-- **Backend**: Node.js + Express
-- **Database**: PostgreSQL
+Treat the full name as optional and fall back to email when it is absent:
 
-## Getting Started
+```tsx
+import { headers } from "next/headers";
 
-### Prerequisites
-- Node.js 18.11 or later (the dev server uses `node --watch`)
-- PostgreSQL 12+ (or configure a remote database)
+export default async function Home() {
+  const requestHeaders = await headers();
+  const email = requestHeaders.get("oai-authenticated-user-email");
+  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
+  const fullName =
+    encodedFullName &&
+    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
+      "percent-encoded-utf-8"
+      ? decodeURIComponent(encodedFullName)
+      : null;
 
-### Installation — Windows (PowerShell)
-
-```powershell
-npm install
-cd client; npm install; cd ..
-cd server; npm install; cd ..
-
-Copy-Item .env.example .env      # then edit .env with your database credentials
+  const displayName = fullName ?? email;
+  // ...
+}
 ```
 
-Then start both servers:
+## Optional Dispatch-Owned ChatGPT Sign-In
 
-```powershell
-npm run dev
-```
+Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
+optional or required ChatGPT sign-in:
 
-You do not need to create the database by hand. On first run the server connects to
-the `postgres` maintenance database, creates `bass_practice` if it is missing, and
-builds the schema:
+- Use `getChatGPTUser()` for optional signed-in UI.
+- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
+  anonymous visitors through Sign in with ChatGPT.
+- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
+  browser links or actions.
+- Pass a same-origin relative `returnTo` path for the destination after sign-in
+  or sign-out. The helper validates and safely encodes it.
+- Mark protected pages with `export const dynamic = "force-dynamic"` because
+  they depend on per-request identity headers.
 
-```
-Created database "bass_practice"
-Database connected
-```
+Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
+OAuth cookies, and identity header injection. Do not implement app routes for
+those reserved paths. Routes that do not import and call the helper remain
+anonymous-compatible.
 
-This matters on Windows in particular, where the PostgreSQL `bin` folder is not added
-to PATH by default, so `createdb` is simply not a recognised command.
+SIWC establishes identity only; it does not prove workspace membership. Use the
+Sites hosting platform's access policy controls for workspace-wide restrictions,
+or enforce explicit server-side membership or allowlist checks.
 
-Note: use `;` rather than `&&` to chain commands in Windows PowerShell 5.1 — `&&`
-only works in PowerShell 7+. The npm scripts themselves run through `cmd.exe`, so
-they work on Windows unchanged.
+Use SIWC for account pages, user-specific dashboards, saved records, and write
+actions tied to the current ChatGPT user. Leave public content anonymous.
 
-### Installation — macOS / Linux
+## Diagnostic Commands
 
-```bash
-npm install
-cd client && npm install && cd ..
-cd server && npm install && cd ..
+- `npm run install:ci`: perform the one bounded lockfile install
+- `npm run dev`: start the Vite/Vinext development server
+- `npm run build`: build and validate the deployable Sites artifact
+- `npm run start`: start the built Vinext application
+- `npm test`: build, validate, and verify the rendered development-preview metadata
+- `npm run validate:artifact`: recheck an existing artifact's manifest and ESM `default.fetch` export
+- `npm run db:generate`: generate Drizzle migrations after schema changes
 
-cp .env.example .env             # then edit .env with your database credentials
-npm run dev
-```
+Use build and validation commands for targeted diagnosis after a remote failure, not as part of the normal checkpoint path.
 
-The server creates the `bass_practice` database on first run if it does not exist.
+The timeout defaults can be overridden for a controlled canary with `SITES_INSTALL_TIMEOUT`, `SITES_INSTALL_KILL_AFTER`, `SITES_BUILD_TIMEOUT`, and `SITES_BUILD_KILL_AFTER`. A timeout fails the command; the helpers never retry an unchanged install or build.
 
-### First run
+## Learn More
 
-The app will be available at http://localhost:3000. Seed the content once:
-
-```
-POST http://localhost:5000/api/lessons/seed
-POST http://localhost:5000/api/fretboard/modes/seed
-```
-
-From PowerShell:
-
-```powershell
-Invoke-RestMethod -Method Post http://localhost:5000/api/lessons/seed
-Invoke-RestMethod -Method Post http://localhost:5000/api/fretboard/modes/seed
-```
-
-### If the database is not up
-
-The app starts anyway and waits for it. You will see:
-
-```
-[server] Database unavailable: Could not reach PostgreSQL at localhost:5432. ...
-[server] Retrying every 5s — start PostgreSQL and this will connect on its own.
-```
-
-Start the PostgreSQL service and it connects by itself — no restart. Until then the
-API answers `503` with an explanation rather than refusing connections, so the Vite
-proxy does not flood the console.
-
-The two common causes:
-
-`Could not reach PostgreSQL at localhost:5432` — the service is not running. On
-Windows, open Services and start `postgresql-x64-<version>`, or:
-
-```powershell
-Start-Service postgresql-x64-16     # adjust to your version
-```
-
-`Password authentication failed for user "postgres"` — the credentials in `.env` do
-not match your install. Edit `DB_USER` and `DB_PASSWORD`.
-
-Check status any time with `http://localhost:5000/api/health`, which reports
-`"database": "connected"` or `"waiting"`. Set `DB_DEBUG=1` to log every SQL statement.
-
-### Microphone
-
-The Practice Studio needs microphone access. Browsers only grant it on `localhost`
-or over HTTPS, so `http://localhost:3000` is fine but reaching the dev server by LAN
-IP is not. Headphones and a clean DI or audio-interface signal give the most accurate
-pitch detection.
-
-## Project Structure
-
-```
-.
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── App.jsx        # Main app component
-│   │   └── index.css      # Global styles
-│   ├── vite.config.js     # Vite configuration
-│   └── package.json
-├── server/                 # Node.js backend
-│   ├── routes/            # API routes
-│   ├── data/              # Lesson data
-│   ├── utils/             # Utility functions
-│   ├── db.js              # Database connection
-│   ├── index.js           # Server entry point
-│   └── package.json
-├── .env.example           # Environment template
-├── .gitignore
-└── package.json           # Root package.json
-```
-
-## API Endpoints
-
-### Lessons
-- `GET /api/lessons` - Get all lessons
-- `GET /api/lessons/:id` - Get specific lesson
-- `GET /api/lessons/number/:number` - Get lesson by number
-- `POST /api/lessons/seed` - Initialize lessons database
-
-### Fretboard
-- `GET /api/fretboard/notes/:string/:fret` - Get note at position
-- `GET /api/fretboard/scale/:mode/:root` - Get all notes for scale
-- `GET /api/fretboard/modes` - Get all modes
-- `POST /api/fretboard/modes/seed` - Initialize modes database
-
-### Sessions
-- `POST /api/sessions/create` - Start a practice session
-- `GET /api/sessions/:id` - Get a session with its recordings and metrics
-- `PUT /api/sessions/:id/complete` - Mark a session complete
-- `GET /api/sessions/history/recent` - Recent completed sessions
-
-### Recordings
-- `POST /api/recordings/:sessionId/upload` - Upload a take and score it
-- `GET /api/recordings/:sessionId/:exerciseNumber` - Fetch a stored take
-
-### Coach
-- `GET /api/coach/next-session` - Recommended key, mode and exercises
-- `GET /api/coach/weak-areas` - Ranked weaknesses from recorded evidence
-- `GET /api/coach/key-matrix` - Per-key results, including untested keys
-
-### Routines
-- `GET /api/routines/plan` - Preview a timed block plan without creating a session
-- `POST /api/routines/start` - Create a session and store its routine
-- `POST /api/routines/repair` - Build a repair block for a failed block
-
-### Assessment
-- `GET /api/assessment/axes` - Five-axis profile (untested axes stay untested)
-- `GET /api/assessment/debt` - Axes that are weak, untested or stale
-
-### Inside/Outside Lab
-- `GET /api/lab/devices/:key/:mode` - Worked examples of each chromatic device
-- `GET /api/lab/progress` - Resolution rate overall and per device
-- `GET /api/lab/habits` - Recurring tendencies across recent blocks
-
-### Theory Course (BASS-301)
-- `GET /api/course` - Syllabus with per-module unlock state and best scores
-- `GET /api/course/modules/:number` - Full module with generated worked example
-- `GET /api/course/reference` - Reference atlas (grid, shapes, rows, ladder, error codes)
-- `GET /api/course/exercises` - Exploration passages E1-E21
-- `GET /api/course/beast/sweep` - Generate one sweep for a key/string/fret
-- `GET /api/course/beast/traversal` - Generate a full traversal up the neck and back
-- `GET /api/course/beast/valid-starts` - In-key starting frets for a key and string
-- `GET /api/course/tests/:quizId` - Fetch a seeded paper (no answer key)
-- `POST /api/course/tests/:quizId/submit` - Mark a paper and record the attempt
-- `GET /api/course/progress` - Modules passed, best scores, weak topics
-
-## Current Features
-
-### Lessons
-- View all 28 lessons organized by topic
-- Each lesson contains:
-  - Concept focus
-  - Listening goals
-  - Pass criteria
-  - Exercise sections
-
-### Fretboard Trainer
-- Interactive 4-string bass fretboard (24 frets)
-- Select any mode and root note
-- Visual highlight of scale tones
-- Root notes highlighted in green
-- Clickable note dots for practice
-
-## How scoring works
-
-The browser records compressed audio (WebM/Opus), which the server cannot decode without
-a transcoder. Pitch detection therefore runs client-side in the Web Audio API's
-`AnalyserNode`, and the detected notes are posted alongside the audio blob. The server
-scores those detections against the session's mode:
-
-- **Pitch accuracy** (60%) — notes inside the mode, *plus* outside notes that resolved
-- **Timing** (25%) — note placement against an eighth-note grid derived from the tempo
-- **Coverage** (15%) — notes played versus notes expected for the block's duration
-
-Three gates then scale the result, because a high weighted average can otherwise hide
-a take that failed at something fundamental:
-
-- **Coverage** — play less than half the expected notes and the score scales down in
-  proportion. Two perfectly-placed notes in a thirty-second block is not a pass.
-- **Pitch** — being perfectly in time does not rescue a take where half the notes were
-  wrong; timing and coverage alone are worth enough to pass a block on rhythm.
-- **Engagement** (outside blocks only) — staying safely inside when the block asked for
-  chromatic departures is not a pass.
-
-Pitch detection uses normalised autocorrelation on a decimated signal rather than an FFT
-bin peak. At bass frequencies an FFT bin is wider than a semitone near the low E, and
-autocorrelation needs octave-error resistance to avoid reporting notes an octave low.
-
-It also reports register span, motif repetition and chromatic content, and turns those
-into spoken-style feedback lines.
-
-### Measurement boundaries
-
-The system evaluates monophonic pitch, note onset timing, register range and recurring
-contours. It does not detect hand tension, posture, or which fret produced a note — a
-given pitch can be played in several places on a bass. A clean DI or audio-interface
-signal gives the most reliable results.
-
-## Next Steps
-
-1. Tension architecture: planning how tension rises and resolves across a whole solo
-3. Motif training: rhythmic variation, changed endings, octave transfer
-4. Call-and-response and sing-first ear training
-5. Playing assessments for the course (recorded, scored against module exit standards)
-6. User authentication and multi-user progress tracking
-
-## Contributing
-
-Feedback and suggestions welcome at fahd.fayedofficial@gmail.com
+- [vinext Documentation](https://github.com/cloudflare/vinext)
+- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
